@@ -77,12 +77,12 @@ public class JavaTokenizer extends AbstractTokenizer {
         log.info("Preprocessing started.");
 
         // TODO: for test - delete
-//        Clock timer = Clock.systemDefaultZone();
+        Clock timer = Clock.systemDefaultZone();
 
         for (FileRepresentative file : files) {
-//            long time = timer.millis();
+            long time = timer.millis();
             new Preprocessor(file).preprocess();
-//            totalTime += timer.millis() - time;
+            totalTime += timer.millis() - time;
 //            System.out.println(file.code);
             UtilityClass.printInsideStructure(file, 0);
         }

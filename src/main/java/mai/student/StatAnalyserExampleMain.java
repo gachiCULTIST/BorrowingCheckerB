@@ -374,6 +374,8 @@ public class StatAnalyserExampleMain {
                 paths2.add(Path.of(myTest + "file5.java"));
 
                 CodeComparer codeComparer = new CodeComparer(paths1, paths2);
+                System.out.println(JavaTokenizer.totalTime);
+
 //                codeComparer.compare();
 //                System.out.println(codeComparer.getResult() + " " + codeComparer.isCheckPassed());
             } catch (Exception e) {

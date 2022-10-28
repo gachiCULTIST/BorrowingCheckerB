@@ -9,41 +9,41 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
-import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.github.javaparser.ast.visitor.GenericListVisitorAdapter;
 import mai.student.intermediateStates.*;
 
 import java.util.*;
 
 // При обработке (всего) дерева необходимо обязательно вторым параметром передавать FileRepresentative
 // Вторым аргументом выступает родительский элемент собственной модели
-public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
+public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStructure> {
 
     private static final String TYPE_ARRAY = "Array";
 
     // Используется для отделения внутренних классов перечислений от классов представляющих констант
     private static final String ENUM_INNER_PREFIX = "?ENUM_";
 
-    private final ArrayDeque<IStructure> children = new ArrayDeque<>();
-
     @Override
-    public void visit(CompilationUnit unit, IStructure arg) {
+    public List<IStructure> visit(CompilationUnit unit, IStructure arg) {
         FileRepresentative file = (FileRepresentative) arg;
 
-        super.visit(unit, arg);
+        List<IStructure> children = super.visit(unit, arg);
 
-        processChildren(file);
+        processChildren(file, children);
+
+        return new ArrayList<>();
     }
 
     @Override
-    public void visit(PackageDeclaration declaration, IStructure arg) {
+    public List<IStructure> visit(PackageDeclaration declaration, IStructure arg) {
         FileRepresentative file = (FileRepresentative) arg;
         file.curPackage = declaration.getNameAsString();
 
-        super.visit(declaration, arg);
+        return super.visit(declaration, arg);
     }
 
     @Override
-    public void visit(ImportDeclaration declaration, IStructure arg) {
+    public List<IStructure> visit(ImportDeclaration declaration, IStructure arg) {
         FileRepresentative file = (FileRepresentative) arg;
 
         // TODO: сохраняю на всякий случай звездочку (не помню - она где-то обрабатывается?)
@@ -53,14 +53,11 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
             file.imports.add(declaration.getNameAsString() + (declaration.isAsterisk() ? "*" : ""));
         }
 
-        super.visit(declaration, arg);
+        return super.visit(declaration, arg);
     }
 
     @Override
-    public void visit(ClassOrInterfaceDeclaration declaration, IStructure arg) {
-        // TODO: пока надо сохранять отдельно, что там есть - потом переделать
-        ArrayDeque<IStructure> backup = children.clone();
-        children.clear();
+    public List<IStructure> visit(ClassOrInterfaceDeclaration declaration, IStructure arg) {
 
         // Обработка наследуемых классов и реализуемых интерфейсов
         ArrayList<Type> inheritanceList = new ArrayList<>();
@@ -83,8 +80,8 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         DefinedClass result = new DefinedClass(declaration.getNameAsString(), params, inheritanceList);
 
         // Обработка внутренностей
-        super.visit(declaration, result);
-        processChildren(result);
+        List<IStructure> children = super.visit(declaration, result);
+        processChildren(result, children);
 
         // Добавление конструктора по умолчанию, если ни одного не было объявлено
         boolean hasDefault = result.functions.stream().reduce(false,
@@ -97,15 +94,12 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
             result.functions.add(defaultConstructor);
         }
 
-        children.addAll(backup);
-        children.offerFirst(result);
-
+        return new ArrayList<>(){{
+            add(result);
+        }};
     }
 
-    public void visit(EnumDeclaration declaration, IStructure arg) {
-        // TODO: пока надо сохранять отдельно, что там есть - потом переделать
-        ArrayDeque<IStructure> backup = children.clone();
-        children.clear();
+    public List<IStructure> visit(EnumDeclaration declaration, IStructure arg) {
 
         // Обработка реализуемых интерфейсов
         ArrayList<Type> inheritanceList = new ArrayList<>();
@@ -117,17 +111,15 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         DefinedClass result = new DefinedClass(declaration.getNameAsString(), null, inheritanceList);
 
         // Обработка внутренностей
-        super.visit(declaration, result);
-        processChildren(result);
+        List<IStructure> children = super.visit(declaration, result);
+        processChildren(result, children);
 
-        children.addAll(backup);
-        children.offerFirst(result);
+        return new ArrayList<>() {{
+            add(result);
+        }};
     }
 
-    public void visit(EnumConstantDeclaration declaration, IStructure arg) {
-        // TODO: пока надо сохранять отдельно, что там есть - потом переделать
-        ArrayDeque<IStructure> backup = children.clone();
-        children.clear();
+    public List<IStructure> visit(EnumConstantDeclaration declaration, IStructure arg) {
 
         // Указываем объявление перечисление как родительский класс
         ArrayList<Type> inheritanceList = new ArrayList<>() {{
@@ -141,34 +133,33 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         VariableOrConst resultVar = new VariableOrConst(resultClass.getType(), declaration.getNameAsString());
 
         // Обработка внутренностей
-        super.visit(declaration, resultClass);
-        processChildren(resultClass);
+        List<IStructure> children = super.visit(declaration, resultClass);
+        processChildren(resultClass, children);
 
-        children.addAll(backup);
-        children.offerFirst(resultVar);
-        children.offerFirst(resultClass);
+        return new ArrayList<>() {{
+            add(resultClass);
+            add(resultVar);
+        }};
     }
 
     @Override
-    public void visit(VariableDeclarator declaration, IStructure arg) {
+    public List<IStructure> visit(VariableDeclarator declaration, IStructure arg) {
         VariableOrConst result = new VariableOrConst(fromParserToMyType(declaration.getType()),
                 declaration.getNameAsString());
 
-        // TODO: process init
-
-        children.offerFirst(result);
+        return new ArrayList<>() {{
+            add(result);
+        }};
     }
 
     @Override
-    public void visit(ObjectCreationExpr expression, IStructure arg) {
+    public List<IStructure> visit(ObjectCreationExpr expression, IStructure arg) {
         // skip anonymous class
+        return new ArrayList<>();
     }
 
     @Override
-    public void visit(MethodDeclaration declaration, IStructure arg) {
-
-        ArrayDeque<IStructure> backup = children.clone();
-        children.clear();
+    public List<IStructure> visit(MethodDeclaration declaration, IStructure arg) {
 
         Type returnValue = fromParserToMyType(declaration.getType());
         ArrayList<VariableOrConst> variablesAndConsts = new ArrayList<>();
@@ -176,6 +167,7 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         // Обработка параметров генерик
         NodeList<TypeParameter> paramsSource = declaration.getTypeParameters();
 
+        // TODO: add field Position position
         // TODO: transfer type params from String[] to Type[]
         String[] params = new String[paramsSource.size()];
         for (int i = 0; i < params.length; ++i) {
@@ -197,21 +189,20 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         result.variablesAndConsts.addAll(variablesAndConsts);
 
         // Обработка внутренностей
+        List<IStructure> children = new ArrayList<>();
         if (declaration.getBody().isPresent()) {
-            visit(declaration.getBody().get(), result);
+            children.addAll(visit(declaration.getBody().get(), result));
         }
-        processChildren(result);
+        processChildren(result, children);
 
-        children.addAll(backup);
-        children.offerFirst(result);
-
+        return new ArrayList<>() {{
+            add(result);
+        }};
     }
 
     // TODO: copy (almost) of MethodDeclaration visitor
     @Override
-    public void visit(ConstructorDeclaration declaration, IStructure arg) {
-        ArrayDeque<IStructure> backup = children.clone();
-        children.clear();
+    public List<IStructure> visit(ConstructorDeclaration declaration, IStructure arg) {
 
         // TODO: надо не забыть про генерики при инициализации
         Type returnValue = ((DefinedClass) arg).getType();
@@ -241,12 +232,12 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         result.variablesAndConsts.addAll(variablesAndConsts);
 
         // Обработка внутренностей
-        visit(declaration.getBody(), result);
-        processChildren(result);
+        List<IStructure> children = visit(declaration.getBody(), result);
+        processChildren(result, children);
 
-        children.addAll(backup);
-        children.offerFirst(result);
-
+        return new ArrayList<>() {{
+            add(result);
+        }};
     }
 
     // Преобразование типов JavaParser в собственные
@@ -313,14 +304,13 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
     }
 
     // Единая обработка потомков для всех типов
-    private void processChildren(IStructure target) {
+    private void processChildren(IStructure target, List<IStructure> children) {
         ArrayList<DefinedClass> classes = new ArrayList<>();
         ArrayList<DefinedFunction> functions = new ArrayList<>();
         ArrayList<VariableOrConst> vars = new ArrayList<>();
 
         // Children separation
-        while (!children.isEmpty()) {
-            IStructure child = children.pollFirst();
+        for (IStructure child : children) {
             child.setParent(target);
             switch (child.getStrucType()) {
                 case Class:
