@@ -1,5 +1,6 @@
 package mai.student.intermediateStates;
 
+import com.github.javaparser.Position;
 import mai.student.intermediateStates.DefinedClass;
 import mai.student.intermediateStates.IStructure;
 
@@ -23,12 +24,19 @@ public class VariableOrConst implements IStructure {
     private int startIndex;
 
     // For Parser
-    // TODO: add link to declaration of all types (Maybe)
+    private Position position;
 
-    public VariableOrConst(Type type, String identifier) {
+    public VariableOrConst(Type type, String identifier, IStructure parent, Position position) {
         this.type = type;
         this.identifier = identifier;
         this.startIndex = -1;
+        this.parent = parent;
+
+        if (position == null) {
+            this.position = new Position(-1, -1);
+        } else {
+            this.position = position;
+        }
     }
 
     public VariableOrConst(Type type, String identifier, int startIndex) {
@@ -37,6 +45,7 @@ public class VariableOrConst implements IStructure {
         this.startIndex = startIndex;
     }
 
+    @Deprecated
     public VariableOrConst(Type type, String identifier, int startIndex, DefinedFunction function,
                            ArrayList<FileRepresentative> files) {
         this.type = type;
@@ -74,11 +83,11 @@ public class VariableOrConst implements IStructure {
         return parent;
     }
 
-    @Override
-    public  void setParent(IStructure parent) {
-        this.parent = parent;
+    public Position getPosition() {
+        return this.position;
     }
 
+    @Deprecated
     public int getStartIndex() {
         return startIndex;
     }

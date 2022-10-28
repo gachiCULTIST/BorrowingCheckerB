@@ -29,16 +29,17 @@ public class DefinedClass implements IStructure {
 
     // Параметризирование
     private boolean isParametrized = false;
-    private String[] params;
+    private Type[] params;
 
     public IStructure parent;
 
     // For Parser
-    public DefinedClass(String className, String[] params, ArrayList<Type> inheritanceList) {
+    public DefinedClass(String className, Type[] params, ArrayList<Type> inheritanceList, IStructure parent) {
         this.className = className;
         this.startIndex = -1;
         this.endIndex = -1;
         this.inheritanceList = inheritanceList != null ? inheritanceList : new ArrayList<>();
+        this.parent = parent;
 
         innerClasses = new ArrayList<>();
         functions = new ArrayList<>();
@@ -52,7 +53,7 @@ public class DefinedClass implements IStructure {
     }
 
     @Deprecated
-    public DefinedClass(String className, int startIndex, int endIndex, String[] params, IStructure parent) {
+    public DefinedClass(String className, int startIndex, int endIndex, Type[] params, IStructure parent) {
         this.className = className;
         this.startIndex = startIndex;
         this.endIndex = endIndex;
@@ -85,16 +86,11 @@ public class DefinedClass implements IStructure {
         return parent;
     }
 
-    @Override
-    public  void setParent(IStructure parent) {
-        this.parent = parent;
-    }
-
     public Type getType() {
         ArrayList<Type> params = new ArrayList<>();
         if (this.isParametrized) {
-            for (String p : this.params) {
-                params.add(new Type(p));
+            for (Type p : this.params) {
+                params.add(p.clone());
             }
         }
         return new Type(className, params);
@@ -114,7 +110,7 @@ public class DefinedClass implements IStructure {
         return isParametrized;
     }
 
-    public String[] getParams() {
+    public Type[] getParams() {
         return params;
     }
 }

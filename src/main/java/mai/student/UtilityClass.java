@@ -57,7 +57,7 @@ public class UtilityClass {
         return end;
     }
 
-    // Функция для представления строки в виде массива из значенний указанной группы указааного рег. выр.
+    // Функция для представления строки в виде массива из значений указанной группы указанного регулярного выражения
     public static ArrayList<String> stringToList(String str, String regex, int groupNum) {
         ArrayList<String> result = new ArrayList<>();
 
@@ -125,12 +125,11 @@ public class UtilityClass {
         } else if (analysedStructure != null && analysedStructure.getStrucType() == StructureType.Class) {
             DefinedClass defClass = (DefinedClass) analysedStructure;
 
-            System.out.println("\t".repeat(level) + defClass.getName() + " " + defClass.getStartIndex() + ":" +
-                    defClass.getEndIndex());
+            System.out.println("\t".repeat(level) + defClass.getName() + " | parent:" + defClass.getParent().getName());
 
             for (VariableOrConst var : defClass.variablesAndConsts) {
-                System.out.println("\t".repeat(level + 1) + var.getType() + " " + var.getName() +
-                        var.getStartIndex());
+                System.out.println("\t".repeat(level + 1) + var.getType() + " " + var.getName() + " " +
+                        var.getPosition().toString() + " | parent: " + var.getParent().getName());
             }
 
             for (DefinedFunction func : defClass.functions) {
@@ -148,12 +147,11 @@ public class UtilityClass {
                 funcArgTypes.add(type.toString());
             }
             System.out.println("\t".repeat(level) + defFunc.getReturnValue() + " " + defFunc.getName() + " (" +
-                    String.join(", ", funcArgTypes) + ") " + defFunc.getStartIndex() + "(" +
-                    +defFunc.getBlockStart() + "):" + defFunc.getEndIndex());
+                    String.join(", ", funcArgTypes) + ") | parent: " + defFunc.getParent().getName());
 
             for (VariableOrConst var : defFunc.variablesAndConsts) {
                 System.out.println("\t".repeat(level + 1) + var.getType() + " " + var.getName() + " " +
-                        var.getStartIndex());
+                        var.getPosition().toString() + " | parent: " + var.getParent().getName());
             }
 
             for (DefinedClass tempClass : defFunc.innerClasses) {

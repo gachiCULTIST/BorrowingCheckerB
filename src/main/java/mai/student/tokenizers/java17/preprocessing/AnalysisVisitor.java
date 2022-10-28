@@ -71,13 +71,13 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         // Обработка параметров класса/интерфейса
         List<TypeParameter> parserParams = declaration.getTypeParameters();
-        String[] params = new String[parserParams.size()];
+        Type[] params = new Type[parserParams.size()];
         for (int i = 0; i < params.length; ++i) {
-            params[i] = parserParams.get(i).asString();
+            params[i] = fromParserToMyType(parserParams.get(i));
         }
 
         // Начальная инициализация
-        DefinedClass result = new DefinedClass(declaration.getNameAsString(), params, inheritanceList);
+        DefinedClass result = new DefinedClass(declaration.getNameAsString(), params, inheritanceList, arg);
 
         // Обработка внутренностей
         List<IStructure> children = super.visit(declaration, result);
@@ -88,9 +88,8 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                 (f, i) -> f.equals(true) || i.getName().equals(result.getName()),
                 (r1, r2) -> r1 || r2);
         if (!hasDefault) {
-            DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), new Type[0], new String[0],
-                    result.getType());
-            defaultConstructor.setParent(result);
+            DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), new Type[0], new Type[0],
+                    result.getType(), result, null);
             result.functions.add(defaultConstructor);
         }
 
@@ -108,7 +107,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         }
 
         // Начальная инициализация
-        DefinedClass result = new DefinedClass(declaration.getNameAsString(), null, inheritanceList);
+        DefinedClass result = new DefinedClass(declaration.getNameAsString(), null, inheritanceList, arg);
 
         // Обработка внутренностей
         List<IStructure> children = super.visit(declaration, result);
@@ -129,8 +128,9 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         // Начальная инициализация
         DefinedClass resultClass = new DefinedClass(ENUM_INNER_PREFIX + declaration.getNameAsString(),
-                null, inheritanceList);
-        VariableOrConst resultVar = new VariableOrConst(resultClass.getType(), declaration.getNameAsString());
+                null, inheritanceList, arg);
+        VariableOrConst resultVar = new VariableOrConst(resultClass.getType(), declaration.getNameAsString(), arg,
+                declaration.getBegin().orElse(null));
 
         // Обработка внутренностей
         List<IStructure> children = super.visit(declaration, resultClass);
@@ -145,7 +145,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     @Override
     public List<IStructure> visit(VariableDeclarator declaration, IStructure arg) {
         VariableOrConst result = new VariableOrConst(fromParserToMyType(declaration.getType()),
-                declaration.getNameAsString());
+                declaration.getNameAsString(), arg, declaration.getBegin().orElse(null));
 
         return new LinkedList<>() {{
             add(result);
@@ -160,6 +160,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
     @Override
     public List<IStructure> visit(MethodDeclaration declaration, IStructure arg) {
+        declaration.getBody().get();
 
         Type returnValue = fromParserToMyType(declaration.getType());
         ArrayList<VariableOrConst> variablesAndConsts = new ArrayList<>();
@@ -167,25 +168,28 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         // Обработка параметров генерик
         NodeList<TypeParameter> paramsSource = declaration.getTypeParameters();
 
-        // TODO: add field Position position
-        // TODO: transfer type params from String[] to Type[]
-        String[] params = new String[paramsSource.size()];
+        Type[] params = new Type[paramsSource.size()];
         for (int i = 0; i < params.length; ++i) {
-            params[i] = fromParserToMyType(paramsSource.get(i)).toString();
+            params[i] = fromParserToMyType(paramsSource.get(i));
         }
 
-        // Обработка параметров функции
+        // Объявление массива типов параметров
         NodeList<Parameter> argParamsSource = declaration.getParameters();
         Type[] argParams = new Type[argParamsSource.size()];
+
+        // Объявление целевого метода
+        DefinedFunction result = new DefinedFunction(declaration.getNameAsString(), argParams, params, returnValue,
+                (DefinedClass) arg, declaration.getBody().orElse(null));
+
+        // Обработка параметров функции
         for (int i = 0; i < argParams.length; ++i) {
             Type paramType = fromParserToMyType(argParamsSource.get(i).getType());
-            variablesAndConsts.add(new VariableOrConst(paramType, argParamsSource.get(i).getNameAsString()));
+            variablesAndConsts.add(new VariableOrConst(paramType, argParamsSource.get(i).getNameAsString(), result,
+                    argParamsSource.get(i).getBegin().orElse(null)));
 
             argParams[i] = paramType;
         }
 
-
-        DefinedFunction result = new DefinedFunction(declaration.getNameAsString(), argParams, params, returnValue);
         result.variablesAndConsts.addAll(variablesAndConsts);
 
         // Обработка внутренностей
@@ -204,31 +208,34 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     @Override
     public List<IStructure> visit(ConstructorDeclaration declaration, IStructure arg) {
 
-        // TODO: надо не забыть про генерики при инициализации
         Type returnValue = ((DefinedClass) arg).getType();
         ArrayList<VariableOrConst> variablesAndConsts = new ArrayList<>();
 
         // Обработка параметров генерик
         NodeList<TypeParameter> paramsSource = declaration.getTypeParameters();
 
-        // TODO: transfer type params from String[] to Type[]
-        String[] params = new String[paramsSource.size()];
+        Type[] params = new Type[paramsSource.size()];
         for (int i = 0; i < params.length; ++i) {
-            params[i] = fromParserToMyType(paramsSource.get(i)).toString();
+            params[i] = fromParserToMyType(paramsSource.get(i));
         }
 
-        // Обработка параметров функции
+        // Объявление массива типов параметров
         NodeList<Parameter> argParamsSource = declaration.getParameters();
         Type[] argParams = new Type[argParamsSource.size()];
+
+        // Объявление целевого конструктора
+        DefinedFunction result = new DefinedFunction(declaration.getNameAsString(), argParams, params, returnValue,
+                (DefinedClass) arg, declaration.getBody());
+
+        // Обработка параметров функции
         for (int i = 0; i < argParams.length; ++i) {
             Type paramType = fromParserToMyType(argParamsSource.get(i).getType());
-            variablesAndConsts.add(new VariableOrConst(paramType, argParamsSource.get(i).getNameAsString()));
+            variablesAndConsts.add(new VariableOrConst(paramType, argParamsSource.get(i).getNameAsString(), result,
+                    argParamsSource.get(i).getBegin().orElse(null)));
 
             argParams[i] = paramType;
         }
 
-
-        DefinedFunction result = new DefinedFunction(declaration.getNameAsString(), argParams, params, returnValue);
         result.variablesAndConsts.addAll(variablesAndConsts);
 
         // Обработка внутренностей
@@ -314,7 +321,6 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         // Children separation
         for (IStructure child : children) {
-            child.setParent(target);
             switch (child.getStrucType()) {
                 case Class:
                     classes.add((DefinedClass) child);
@@ -326,7 +332,6 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                     vars.add((VariableOrConst) child);
                     break;
                 default:
-                    // TODO: form normal exception type
                     throw new UnsupportedOperationException("AnalysisVisitor.processChildren: unsupported child type!");
             }
         }
@@ -349,7 +354,6 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                 fi.classes.addAll(classes);
                 break;
             default:
-                // TODO: form normal exception type
                 throw new UnsupportedOperationException("AnalysisVisitor.processChildren: unsupported target type!");
         }
     }

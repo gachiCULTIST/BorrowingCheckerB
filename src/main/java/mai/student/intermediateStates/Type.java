@@ -185,6 +185,7 @@ public class Type {
         }
     }
 
+    // TODO: check correction after changing params type from String[] to Type[] in classes and funcs
     public static Type getTypeWithMapping(Type origin, HashMap<String, Type> params) {
         Type result = origin.clone();
         result.getParams().clear();

@@ -1,6 +1,7 @@
 package mai.student.intermediateStates;
 
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.stmt.BlockStmt;
 
 import java.util.ArrayList;
 
@@ -22,7 +23,7 @@ public class DefinedFunction implements IStructure {
 
     // Параметризирование
     private boolean isParametrized = false;
-    private String[] params;
+    private Type[] params;
     private Type returnValue;
 
     public ArrayList<DefinedClass> innerClasses;
@@ -34,21 +35,22 @@ public class DefinedFunction implements IStructure {
     public DefinedClass parent;
 
     // Представление токенов (только для методов, поскольку мы сводим все к монолиту)
+    private boolean isTokenized = false;
     public ArrayList<Integer> tokens;
 
     // For Parser
-    private MethodDeclaration declaration = null;
+    private BlockStmt body = null;
 
     // For Parser
-    //TODO: declaration.getBegin
-    public DefinedFunction(String funcName, Type[] argTypes, String[] params, Type returnValue) {
+    public DefinedFunction(String funcName, Type[] argTypes, Type[] params, Type returnValue, DefinedClass parent,
+                           BlockStmt body) {
         this.funcName = funcName;
         this.argTypes = argTypes;
         this.startIndex = -1;
         this.blockStart = -1;
         this.endIndex = -1;
         this.returnValue = returnValue;
-        this.parent = null;
+        this.parent = parent;
 
         innerClasses = new ArrayList<>();
         variablesAndConsts = new ArrayList<>();
@@ -58,9 +60,16 @@ public class DefinedFunction implements IStructure {
             this.params = params;
             isParametrized = true;
         }
+
+        if (body == null) {
+            isTokenized = true;
+        } else {
+            this.body = body;
+        }
     }
 
-    public DefinedFunction(String funcName, Type[] argTypes, int startIndex, int blockStart, int endIndex, String[] params,
+    @Deprecated
+    public DefinedFunction(String funcName, Type[] argTypes, int startIndex, int blockStart, int endIndex, Type[] params,
                            Type returnValue, boolean isRecurrent, DefinedClass parent) {
         this.funcName = funcName;
         this.argTypes = argTypes;
@@ -86,6 +95,14 @@ public class DefinedFunction implements IStructure {
         return funcName;
     }
 
+    public BlockStmt getBody() {
+        return body;
+    }
+
+    public void addToken(Integer token) {
+        tokens.add(token);
+    }
+
     @Override
     public StructureType getStrucType() {
         return StructureType.Function;
@@ -96,23 +113,21 @@ public class DefinedFunction implements IStructure {
         return parent;
     }
 
-    @Override
-    public void setParent(IStructure parent) {
-        this.parent = (DefinedClass) parent;
-    }
-
     public Type[] getArgTypes() {
         return argTypes;
     }
 
+    @Deprecated
     public int getStartIndex() {
         return startIndex;
     }
 
+    @Deprecated
     public int getBlockStart() {
         return blockStart;
     }
 
+    @Deprecated
     public int getEndIndex() {
         return endIndex;
     }
@@ -121,7 +136,7 @@ public class DefinedFunction implements IStructure {
         return isParametrized;
     }
 
-    public String[] getParams() {
+    public Type[] getParams() {
         return params;
     }
 
@@ -129,6 +144,7 @@ public class DefinedFunction implements IStructure {
         return returnValue;
     }
 
+    @Deprecated
     public boolean isRecurrent() {
         return isRecurrent;
     }

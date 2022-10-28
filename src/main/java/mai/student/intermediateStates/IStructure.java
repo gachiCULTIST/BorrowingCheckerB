@@ -12,8 +12,6 @@ public interface IStructure {
         return null;
     }
 
-    default void setParent(IStructure parent) {}
-
     // Поиск сущности
     // Параметр isPartOfInheritanceTree за рамки поиска, если он истинен то поиск не выходит за рамки дерева населодования
     // (сам посебе предотвращает зацыкиванывания поиска в нескольких файлах со связанными классами)
@@ -280,17 +278,19 @@ public interface IStructure {
         }
     }
 
+    // TODO: transfer HashMap<String, Type> to HashMap<Type, Type>
     public static void mapParams(Type type, HashMap<String, Type> params) {
         if (type.linkToClass == null) {
             return;
         }
 
-        String[] paramList = type.linkToClass.getParams();
+        Type[] paramList = type.linkToClass.getParams();
         for (int i = 0; paramList != null && i < paramList.length; ++i) {
             if (params.containsKey(type.getParams().get(i).getName())) {
                 continue;
             }
-            params.put(paramList[i], type.getParams().get(i));
+
+            params.put(paramList[i].toString(), type.getParams().get(i));
         }
     }
 }
