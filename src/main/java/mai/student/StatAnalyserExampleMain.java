@@ -136,59 +136,59 @@ public class StatAnalyserExampleMain {
 //            HashMap<String, ArrayList<StatisticCollector>> statistic = new HashMap<>();
 //
 
-            // TODO: run through all works
-            int parseProblemCounter = 0;
-            for (File f1 : dir.listFiles()) {
-                String name1 = f1.getName().split("_")[0];
-                String assignment1 = f1.getName().split("_")[1];
-
-                if (f1.isDirectory() || f1.getName().endsWith(".java_errorReport.txt") ||
-                        f1.getName().endsWith(".zip_errorReport.txt")) {
-                    continue;
-                }
-
-//                if (!statistic.containsKey(assignment1)) {
-//                    statistic.put(assignment1, new ArrayList<>());
+//            // TODO: run through all works
+//            int parseProblemCounter = 0;
+//            for (File f1 : dir.listFiles()) {
+//                String name1 = f1.getName().split("_")[0];
+//                String assignment1 = f1.getName().split("_")[1];
+//
+//                if (f1.isDirectory() || f1.getName().endsWith(".java_errorReport.txt") ||
+//                        f1.getName().endsWith(".zip_errorReport.txt")) {
+//                    continue;
 //                }
-
-                for (File f2 : dir.listFiles()) {
-                    String name2 = f2.getName().split("_")[0];
-                    String assignment2 = f2.getName().split("_")[1];
-
-                    if (f2.isDirectory() || f2.getName().endsWith(".java_errorReport.txt") ||
-                            !assignment1.equals(assignment2) || f2.getName().endsWith(".zip_errorReport.txt")) {
-                        continue;
-                    }
-
-                    ArrayList<Path> paths1 = new ArrayList<>();
-                    paths1.add(f1.toPath());
-
-                    ArrayList<Path> paths2 = new ArrayList<>();
-                    paths2.add(f2.toPath());
-
-                    System.out.println(name1 + name2);
-                    try {
-                        CodeComparer codeComparer = new CodeComparer(paths1, paths2);
-                        System.out.println("!!!! TIME: " + JavaTokenizer.totalTime);
-//                        codeComparer.compare();
-//                        System.out.println(codeComparer.isCheckPassed());
-
-
-//                        statistic.get(assignment1).add(new StatisticCollector(name1, name2,
-//                                (new File(paths1.get(0).toString())).length(),
-//                                (new File(paths2.get(0).toString())).length(), codeComparer.getResult()));
-                    } catch (Exception e) {
-                        if (e instanceof ParseProblemException) {
-                            parseProblemCounter += 1;
-                        } else {
-                            System.out.println(e.getMessage());
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }
-            }
-            System.out.println("Parse problems: " + parseProblemCounter);
-            // TODO: end
+//
+////                if (!statistic.containsKey(assignment1)) {
+////                    statistic.put(assignment1, new ArrayList<>());
+////                }
+//
+//                for (File f2 : dir.listFiles()) {
+//                    String name2 = f2.getName().split("_")[0];
+//                    String assignment2 = f2.getName().split("_")[1];
+//
+//                    if (f2.isDirectory() || f2.getName().endsWith(".java_errorReport.txt") ||
+//                            !assignment1.equals(assignment2) || f2.getName().endsWith(".zip_errorReport.txt")) {
+//                        continue;
+//                    }
+//
+//                    ArrayList<Path> paths1 = new ArrayList<>();
+//                    paths1.add(f1.toPath());
+//
+//                    ArrayList<Path> paths2 = new ArrayList<>();
+//                    paths2.add(f2.toPath());
+//
+//                    System.out.println(name1 + name2);
+//                    try {
+//                        CodeComparer codeComparer = new CodeComparer(paths1, paths2);
+//                        System.out.println("!!!! TIME: " + JavaTokenizer.totalTime);
+////                        codeComparer.compare();
+////                        System.out.println(codeComparer.isCheckPassed());
+//
+//
+////                        statistic.get(assignment1).add(new StatisticCollector(name1, name2,
+////                                (new File(paths1.get(0).toString())).length(),
+////                                (new File(paths2.get(0).toString())).length(), codeComparer.getResult()));
+//                    } catch (Exception e) {
+//                        if (e instanceof ParseProblemException) {
+//                            parseProblemCounter += 1;
+//                        } else {
+//                            System.out.println(e.getMessage());
+//                            throw new RuntimeException(e);
+//                        }
+//                    }
+//                }
+//            }
+//            System.out.println("Parse problems: " + parseProblemCounter);
+//            // TODO: end
 
 //
 //            // Подсчет среднего размера задания
@@ -357,29 +357,29 @@ public class StatAnalyserExampleMain {
 
 
             // TODO: check my files
-//            String myTest = "testfiles/ru/mai/";
-//            try {
-//                ArrayList<Path> paths1 = new ArrayList<>();
-//                paths1.add(Path.of(myTest + "file1.java"));
-//                paths1.add(Path.of(myTest + "file2.java"));
-//                paths1.add(Path.of(myTest + "file3.java"));
-//                paths1.add(Path.of(myTest + "file4.java"));
-//                paths1.add(Path.of(myTest + "file5.java"));
-//
-//                ArrayList<Path> paths2 = new ArrayList<>();
-//                paths2.add(Path.of(myTest + "file1.java"));
-//                paths2.add(Path.of(myTest + "file2.java"));
-//                paths2.add(Path.of(myTest + "file3.java"));
-//                paths2.add(Path.of(myTest + "file4.java"));
-//                paths2.add(Path.of(myTest + "file5.java"));
-//
-//                CodeComparer codeComparer = new CodeComparer(paths1, paths2);
-////                codeComparer.compare();
-////                System.out.println(codeComparer.getResult() + " " + codeComparer.isCheckPassed());
-//            } catch (Exception e) {
-//                System.out.println(e);
-//                throw new RuntimeException(e);
-//            }
+            String myTest = "testfiles/ru/mai/";
+            try {
+                ArrayList<Path> paths1 = new ArrayList<>();
+                paths1.add(Path.of(myTest + "file1.java"));
+                paths1.add(Path.of(myTest + "file2.java"));
+                paths1.add(Path.of(myTest + "file3.java"));
+                paths1.add(Path.of(myTest + "file4.java"));
+                paths1.add(Path.of(myTest + "file5.java"));
+
+                ArrayList<Path> paths2 = new ArrayList<>();
+                paths2.add(Path.of(myTest + "file1.java"));
+                paths2.add(Path.of(myTest + "file2.java"));
+                paths2.add(Path.of(myTest + "file3.java"));
+                paths2.add(Path.of(myTest + "file4.java"));
+                paths2.add(Path.of(myTest + "file5.java"));
+
+                CodeComparer codeComparer = new CodeComparer(paths1, paths2);
+//                codeComparer.compare();
+//                System.out.println(codeComparer.getResult() + " " + codeComparer.isCheckPassed());
+            } catch (Exception e) {
+                System.out.println(e);
+                throw new RuntimeException(e);
+            }
 
 //            try {
 //                ArrayList<Path> paths1 = new ArrayList<>();

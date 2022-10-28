@@ -34,16 +34,11 @@ public class DefinedClass implements IStructure {
     public IStructure parent;
 
     // For Parser
-    private ClassOrInterfaceDeclaration declaration;
-
-    // For Parser
-    public DefinedClass(String className, String[] params, ArrayList<Type> inheritanceList,
-                        ClassOrInterfaceDeclaration declaration) {
+    public DefinedClass(String className, String[] params, ArrayList<Type> inheritanceList) {
         this.className = className;
         this.startIndex = -1;
         this.endIndex = -1;
-        this.inheritanceList = inheritanceList;
-        this.declaration = declaration;
+        this.inheritanceList = inheritanceList != null ? inheritanceList : new ArrayList<>();
 
         innerClasses = new ArrayList<>();
         functions = new ArrayList<>();
@@ -97,8 +92,10 @@ public class DefinedClass implements IStructure {
 
     public Type getType() {
         ArrayList<Type> params = new ArrayList<>();
-        for (String p : this.params) {
-            params.add(new Type(p));
+        if (this.isParametrized) {
+            for (String p : this.params) {
+                params.add(new Type(p));
+            }
         }
         return new Type(className, params);
     }

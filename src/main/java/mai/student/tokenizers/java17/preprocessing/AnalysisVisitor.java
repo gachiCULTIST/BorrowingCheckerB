@@ -12,15 +12,16 @@ import com.github.javaparser.ast.type.TypeParameter;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import mai.student.intermediateStates.*;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 // При обработке (всего) дерева необходимо обязательно вторым параметром передавать FileRepresentative
+// Вторым аргументом выступает родительский элемент собственной модели
 public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
 
     private static final String TYPE_ARRAY = "Array";
+
+    // Используется для отделения внутренних классов перечислений от классов представляющих констант
+    private static final String ENUM_INNER_PREFIX = "?ENUM_";
 
     private final ArrayDeque<IStructure> children = new ArrayDeque<>();
 
@@ -79,7 +80,7 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         }
 
         // Начальная инициализация
-        DefinedClass result = new DefinedClass(declaration.getNameAsString(), params, inheritanceList, declaration);
+        DefinedClass result = new DefinedClass(declaration.getNameAsString(), params, inheritanceList);
 
         // Обработка внутренностей
         super.visit(declaration, result);
@@ -99,6 +100,53 @@ public class AnalysisVisitor extends VoidVisitorAdapter<IStructure> {
         children.addAll(backup);
         children.offerFirst(result);
 
+    }
+
+    public void visit(EnumDeclaration declaration, IStructure arg) {
+        // TODO: пока надо сохранять отдельно, что там есть - потом переделать
+        ArrayDeque<IStructure> backup = children.clone();
+        children.clear();
+
+        // Обработка реализуемых интерфейсов
+        ArrayList<Type> inheritanceList = new ArrayList<>();
+        for (ClassOrInterfaceType inhInterface : declaration.getImplementedTypes()) {
+            inheritanceList.add(fromParserToMyType(inhInterface));
+        }
+
+        // Начальная инициализация
+        DefinedClass result = new DefinedClass(declaration.getNameAsString(), null, inheritanceList);
+
+        // Обработка внутренностей
+        super.visit(declaration, result);
+        processChildren(result);
+
+        children.addAll(backup);
+        children.offerFirst(result);
+    }
+
+    public void visit(EnumConstantDeclaration declaration, IStructure arg) {
+        // TODO: пока надо сохранять отдельно, что там есть - потом переделать
+        ArrayDeque<IStructure> backup = children.clone();
+        children.clear();
+
+        // Указываем объявление перечисление как родительский класс
+        ArrayList<Type> inheritanceList = new ArrayList<>() {{
+            add(new Type(arg.getName(), null, (DefinedClass) arg));
+        }};
+
+
+        // Начальная инициализация
+        DefinedClass resultClass = new DefinedClass(ENUM_INNER_PREFIX + declaration.getNameAsString(),
+                null, inheritanceList);
+        VariableOrConst resultVar = new VariableOrConst(resultClass.getType(), declaration.getNameAsString());
+
+        // Обработка внутренностей
+        super.visit(declaration, resultClass);
+        processChildren(resultClass);
+
+        children.addAll(backup);
+        children.offerFirst(resultVar);
+        children.offerFirst(resultClass);
     }
 
     @Override
