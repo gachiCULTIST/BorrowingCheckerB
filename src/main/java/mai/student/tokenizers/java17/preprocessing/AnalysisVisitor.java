@@ -31,7 +31,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         processChildren(file, children);
 
-        return new ArrayList<>();
+        return new LinkedList<>();
     }
 
     @Override
@@ -94,7 +94,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
             result.functions.add(defaultConstructor);
         }
 
-        return new ArrayList<>(){{
+        return new LinkedList<>(){{
             add(result);
         }};
     }
@@ -114,7 +114,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         List<IStructure> children = super.visit(declaration, result);
         processChildren(result, children);
 
-        return new ArrayList<>() {{
+        return new LinkedList<>() {{
             add(result);
         }};
     }
@@ -136,7 +136,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         List<IStructure> children = super.visit(declaration, resultClass);
         processChildren(resultClass, children);
 
-        return new ArrayList<>() {{
+        return new LinkedList<>() {{
             add(resultClass);
             add(resultVar);
         }};
@@ -147,7 +147,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         VariableOrConst result = new VariableOrConst(fromParserToMyType(declaration.getType()),
                 declaration.getNameAsString());
 
-        return new ArrayList<>() {{
+        return new LinkedList<>() {{
             add(result);
         }};
     }
@@ -155,7 +155,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     @Override
     public List<IStructure> visit(ObjectCreationExpr expression, IStructure arg) {
         // skip anonymous class
-        return new ArrayList<>();
+        return new LinkedList<>();
     }
 
     @Override
@@ -189,13 +189,13 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         result.variablesAndConsts.addAll(variablesAndConsts);
 
         // Обработка внутренностей
-        List<IStructure> children = new ArrayList<>();
+        List<IStructure> children = new LinkedList<>();
         if (declaration.getBody().isPresent()) {
             children.addAll(visit(declaration.getBody().get(), result));
         }
         processChildren(result, children);
 
-        return new ArrayList<>() {{
+        return new LinkedList<>() {{
             add(result);
         }};
     }
@@ -235,7 +235,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         List<IStructure> children = visit(declaration.getBody(), result);
         processChildren(result, children);
 
-        return new ArrayList<>() {{
+        return new LinkedList<>() {{
             add(result);
         }};
     }
@@ -281,8 +281,11 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         if (type.isVarType()) {
             return Type.getVarType();
         }
+        if (type.isWildcardType()) {
+            // TODO: для ? пока вот так
+            return Type.getObjectType();
+        }
 
-        // TODO: form normal exception type
         throw new UnsupportedOperationException("AnalysisVisitor.fromParserToMyType: unsupported type of type!");
     }
 

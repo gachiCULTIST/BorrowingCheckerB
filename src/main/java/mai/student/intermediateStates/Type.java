@@ -18,6 +18,7 @@ public class Type {
     private static final String TYPE_UNDEFINED = "null";
     private static final String TYPE_EXCEPTION = "Exception";
     private static final String TYPE_VAR = "var";
+    private static final String TYPE_OBJECT = "Object";
 
     private static final Type[] byteAutoCast = {new Type(TYPE_SHORT), new Type(TYPE_CHAR), new Type(TYPE_INTEGER),
             new Type(TYPE_LONG), new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
@@ -218,5 +219,8 @@ public class Type {
 
     public static Type getVarType() {
         return new Type(TYPE_VAR);
+    }
+    public static Type getObjectType() {
+        return new Type(TYPE_OBJECT);
     }
 }
