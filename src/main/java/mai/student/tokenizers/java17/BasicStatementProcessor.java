@@ -13,7 +13,7 @@ import java.util.Map;
 // Просто вставляет элемент в представление при этом,
 // если конкретного элемента нет в словаре токенов,
 // то он туда добавляется с генерируемым идентификатором
-public class BasicLexemeProcessor implements LexemeProcessor {
+public class BasicStatementProcessor implements StatementProcessor {
 
     private static final int START_INDEX = 1000;
 
@@ -27,12 +27,12 @@ public class BasicLexemeProcessor implements LexemeProcessor {
 
     // Вообще визитор используется для определения типа Expression,
     // по скольку все элементы составных выражений представляет данный тип
-    private final VoidVisitor<LexemeProcessor> visitor;
+    private final VoidVisitor<StatementProcessor> visitor;
 
 
-    public BasicLexemeProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function,
-                                List<FileRepresentative> files, VoidVisitor<LexemeProcessor> visitor) {
-        // TODO: throw exception f someone == null
+    public BasicStatementProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function,
+                                   List<FileRepresentative> files, VoidVisitor<StatementProcessor> visitor) {
+        // TODO: throw exception if someone == null
 
         this.tokenDictionary = tokenDictionary;
         this.function = function;

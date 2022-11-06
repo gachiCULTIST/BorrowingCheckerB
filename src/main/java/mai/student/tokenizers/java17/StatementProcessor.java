@@ -3,7 +3,7 @@ package mai.student.tokenizers.java17;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
 
-interface LexemeProcessor {
+interface StatementProcessor {
 
     // []
     void process(ArrayAccessExpr arrayAccessExpr);
