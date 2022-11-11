@@ -321,4 +321,10 @@ public class TokenizerVisitor extends VoidVisitorAdapter<StatementProcessor> {
     public void visit(YieldStmt yieldStmt, StatementProcessor processor) {
         processor.process(yieldStmt);
     }
+
+    // Expression wrapper
+    @Override
+    public void visit(ExpressionStmt expressionStmt, StatementProcessor processor) {
+        processor.process(expressionStmt);
+    }
 }

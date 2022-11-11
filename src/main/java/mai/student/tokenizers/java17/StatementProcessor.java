@@ -5,6 +5,8 @@ import com.github.javaparser.ast.stmt.*;
 
 interface StatementProcessor {
 
+    void run();
+
     // []
     void process(ArrayAccessExpr arrayAccessExpr);
 
@@ -160,5 +162,8 @@ interface StatementProcessor {
 
     // yield Expression;
     void process(YieldStmt yieldStmt);
+
+    // Expression wrapper
+    void process(ExpressionStmt expressionStmt);
 
 }

@@ -21,6 +21,7 @@ import java.util.Optional;
 // Просто вставляет элемент в представление при этом,
 // если конкретного элемента нет в словаре токенов,
 // то он туда добавляется с генерируемым идентификатором
+// + все литералы преобразуются к обобщающему литеральному токену
 public class BasicStatementProcessor implements StatementProcessor {
 
     protected static final String LITERAL = "*literal*";
@@ -98,6 +99,11 @@ public class BasicStatementProcessor implements StatementProcessor {
     //  PS: when scope uses type Type, i just addToken(type.asString())
 
     @Override
+    public void run() {
+        process(function.getBody());
+    }
+
+    @Override
     public void process(ArrayAccessExpr arrayAccessExpr) {
         addToken(LEFT_BRACKET);
         arrayAccessExpr.getIndex().accept(visitor, this);
@@ -150,7 +156,7 @@ public class BasicStatementProcessor implements StatementProcessor {
     public void process(BinaryExpr binaryExpr) {
         binaryExpr.getLeft().accept(visitor, this);
         addToken(binaryExpr.getOperator().asString());
-        binaryExpr.getLeft().accept(visitor, this);
+        binaryExpr.getRight().accept(visitor, this);
     }
 
     @Override
@@ -211,13 +217,17 @@ public class BasicStatementProcessor implements StatementProcessor {
     // При обработке нельзя определить, были ли указаны фигурные скобки у параметров или нет
     @Override
     public void process(LambdaExpr lambdaExpr) {
-        addToken(LEFT_PAREN);
+        if (lambdaExpr.isEnclosingParameters()) {
+            addToken(LEFT_PAREN);
+        }
         for (Parameter param : lambdaExpr.getParameters()) {
             // TODO: check type processing if it is not present
             addTypeAsTokens(param.getType());
             addToken(param.getNameAsString());
         }
-        addToken(RIGHT_PAREN);
+        if (lambdaExpr.isEnclosingParameters()) {
+            addToken(RIGHT_PAREN);
+        }
 
         addToken(LAMBDA);
         lambdaExpr.getBody().accept(visitor, this);
@@ -581,9 +591,7 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(RIGHT_PAREN);
 
         // body
-        addToken(LEFT_BRACE);
         forEachStmt.getBody().accept(visitor, this);
-        addToken(RIGHT_BRACE);
     }
 
     @Override
@@ -623,9 +631,7 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(RIGHT_PAREN);
 
         // body
-        addToken(LEFT_BRACE);
         forStmt.getBody().accept(visitor, this);
-        addToken(RIGHT_BRACE);
     }
 
     @Override
@@ -806,6 +812,12 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(SEMICOLON);
     }
 
+    @Override
+    public void process(ExpressionStmt expressionStmt) {
+        expressionStmt.getExpression().accept(visitor, this);
+        addToken(SEMICOLON);
+    }
+
     protected void addToken(String lexeme) {
         if (!tokenDictionary.containsKey(lexeme)) {
             tokenDictionary.put(lexeme, indexForNextElement);
@@ -828,6 +840,7 @@ public class BasicStatementProcessor implements StatementProcessor {
     protected void addTypeAsTokens(Type type) {
         if (type.isPrimitiveType()) {
             addToken(type.asPrimitiveType().asString());
+            return;
         }
 
         // Ссылочные типы
@@ -839,6 +852,7 @@ public class BasicStatementProcessor implements StatementProcessor {
                 addToken(LEFT_BRACKET);
                 addToken(RIGHT_BRACKET);
             }
+            return;
         }
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType t = type.asClassOrInterfaceType();
@@ -869,9 +883,11 @@ public class BasicStatementProcessor implements StatementProcessor {
 
                 addToken(GREATER);
             }
+            return;
         }
         if (type.isTypeParameter()) {
             addToken(type.asTypeParameter().getNameAsString());
+            return;
         }
         if (type.isIntersectionType()) {
             IntersectionType intersectionType = (IntersectionType) type;
@@ -886,6 +902,7 @@ public class BasicStatementProcessor implements StatementProcessor {
 
                 addTypeAsTokens(t);
             }
+            return;
         }
         if (type.isUnionType()) {
             UnionType unionType = (UnionType) type;
@@ -900,11 +917,17 @@ public class BasicStatementProcessor implements StatementProcessor {
 
                 addTypeAsTokens(t);
             }
+            return;
         }
         if (type.isWildcardType()) {
             addToken(QUESTION);
+            return;
+        }
+        if (type.isUnknownType()) {
+            // uses in lambda
+            return;
         }
 
-        throw new UnsupportedOperationException("BasicStatementProcessor.addTypeAsTokens: unsupported type of type!");
+        throw new UnsupportedOperationException("BasicStatementProcessor.addTypeAsTokens: unsupported type of type! ");
     }
 }
