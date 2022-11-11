@@ -57,6 +57,12 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     }
 
     @Override
+    public List<IStructure> visit(RecordDeclaration recordDeclaration, IStructure arg) {
+        // TODO
+        return null;
+    }
+
+    @Override
     public List<IStructure> visit(ClassOrInterfaceDeclaration declaration, IStructure arg) {
 
         // Обработка наследуемых классов и реализуемых интерфейсов

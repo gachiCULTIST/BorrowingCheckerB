@@ -68,7 +68,7 @@ interface StatementProcessor {
     // Expr.method()
     void process(MethodCallExpr methodCallExpr);
 
-    // Expr::method
+    // Expr::<type1, type2>method
     void process(MethodReferenceExpr methodReferenceExpr);
 
     // var

@@ -87,38 +87,40 @@ public class JavaTokenizer extends AbstractTokenizer {
             UtilityClass.printInsideStructure(file, 0);
         }
 
-        // TODO: новая версия препроцессора не может определить позиции элементов - поэтому пока без токенизации
-//        DefinedFunction mainFunc = findMainFunction();
-//        if (mainFunc == null) {
-//            log.log(Level.SEVERE, "Can't find main method");
-//            throw new UnsupportedOperationException("Can't find main method");
-//        }
-//
-//        log.info("Tokenizing started.");
-//        StringBuilder code = IStructure.getCode(mainFunc);
-//        Lexer lexer = new Lexer(code, mainFunc, tokens);
-//        tokenizeFunc(lexer, mainFunc, code, false);
-//        result = mainFunc.tokens;
+        DefinedFunction mainFunc = findMainFunction();
+        if (mainFunc == null) {
+            log.log(Level.SEVERE, "Can't find main method");
+            throw new UnsupportedOperationException("Can't find main method");
+        }
+
+        log.info("Tokenizing started.");
+        BasicStatementProcessor processor = new BasicStatementProcessor(tokens, mainFunc, files, new TokenizerVisitor());
+        processor.process(mainFunc.getBody());
+        result = mainFunc.tokens;
 
 //         Запись рузельтатов теста
-//        try (FileWriter saveResult = new FileWriter(files.get(0).getFilePath().getParent() + "/results/" /*"Статистика2022/results/"*/
-//                + files.get(0).getFilePath().getFileName() + "_result.txt", false)) {
-//            StringBuilder result = new StringBuilder();
-//            for (int i : mainFunc.tokens) {
-//                String eq = "";
-//                for (Map.Entry var : tokens.entrySet()) {
-//                    if ((int) var.getValue() == i) {
-//                        eq = (String) var.getKey();
-//                    }
-//                }
-//                result.append(i + eq + " ");
-//            }
-//
-//            saveResult.write(result.toString());
-//            saveResult.flush();
-//        } catch (Exception ex) {
-//            System.out.println(ex.getMessage());
-//        }
+        try (FileWriter saveResult = new FileWriter(files.get(0).getFilePath().getParent() + "/results/" /*"Статистика2022/results/"*/
+                + files.get(0).getFilePath().getFileName() + "_result.txt", false)) {
+            StringBuilder result = new StringBuilder();
+            for (int i : mainFunc.tokens) {
+                String eq = "";
+                for (Map.Entry var : tokens.entrySet()) {
+                    if ((int) var.getValue() == i) {
+                        eq = (String) var.getKey();
+                    }
+                }
+
+                result.append(i + eq + " ");
+                if (eq.equals("{") || eq.equals("}") || eq.equals(";")) {
+                    result.append('\n');
+                }
+            }
+
+            saveResult.write(result.toString());
+            saveResult.flush();
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
     }
 
     private DefinedFunction findMainFunction() {
