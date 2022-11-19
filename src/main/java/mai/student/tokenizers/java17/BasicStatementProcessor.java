@@ -2,7 +2,6 @@ package mai.student.tokenizers.java17;
 
 import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
@@ -13,6 +12,7 @@ import com.github.javaparser.ast.visitor.VoidVisitor;
 import mai.student.intermediateStates.DefinedFunction;
 import mai.student.intermediateStates.FileRepresentative;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +22,8 @@ import java.util.Optional;
 // если конкретного элемента нет в словаре токенов,
 // то он туда добавляется с генерируемым идентификатором
 // + все литералы преобразуются к обобщающему литеральному токену
+// + Объявление списка элементов в виде перечня отделенных объявлений
+// Игнорирование локальных и анонимных классов и локальных записей.
 public class BasicStatementProcessor implements StatementProcessor {
 
     protected static final String LITERAL = "*literal*";
@@ -34,10 +36,11 @@ public class BasicStatementProcessor implements StatementProcessor {
     protected static final String INSTANCE_OF = "instanceof";
     protected static final String TRY = "try";
     protected static final String CATCH = "catch";
-    protected static final String FINAL = "final";
+    protected static final String FINALLY = "finally";
     protected static final String THROW = "throw";
     protected static final String SWITCH = "switch";
     protected static final String CASE = "case";
+    protected static final String DEFAULT = "default";
     protected static final String BREAK = "break";
     protected static final String YIELD = "yield";
     protected static final String CONTINUE = "continue";
@@ -93,18 +96,15 @@ public class BasicStatementProcessor implements StatementProcessor {
         this.visitor = visitor;
     }
 
-    // TODO: add modifier printer for Parameters where are used
-
-    // TODO: check type with arrays or generics in some expressions
-    //  PS: when scope uses type Type, i just addToken(type.asString())
-
     @Override
     public void run() {
         process(function.getBody());
+        function.tokenized();
     }
 
     @Override
     public void process(ArrayAccessExpr arrayAccessExpr) {
+        arrayAccessExpr.getName().accept(visitor, this);
         addToken(LEFT_BRACKET);
         arrayAccessExpr.getIndex().accept(visitor, this);
         addToken(RIGHT_BRACKET);
@@ -114,8 +114,6 @@ public class BasicStatementProcessor implements StatementProcessor {
     public void process(ArrayCreationExpr arrayCreationExpr) {
         addToken(NEW);
 
-        // TODO: здесь парсер возвращает тип Type,
-        //  хотя там может выражение типа java.util.ArrayList + Type<>
         addTypeAsTokens(arrayCreationExpr.getElementType());
 
         // brackets with possible insides
@@ -136,19 +134,14 @@ public class BasicStatementProcessor implements StatementProcessor {
     @Override
     public void process(ArrayInitializerExpr arrayInitializerExpr) {
         addToken(LEFT_BRACE);
-
-        for (Expression value : arrayInitializerExpr.getValues()) {
-            // TODO: check with multidimensional array
-            value.accept(visitor, this);
-        }
-
+        addExpressionElemList(arrayInitializerExpr.getValues(), COMMA);
         addToken(RIGHT_BRACE);
     }
 
     @Override
     public void process(AssignExpr assignExpr) {
         assignExpr.getTarget().accept(visitor, this);
-        addToken(ASSIGN);
+        addToken(assignExpr.getOperator().asString());
         assignExpr.getValue().accept(visitor, this);
     }
 
@@ -162,14 +155,13 @@ public class BasicStatementProcessor implements StatementProcessor {
     @Override
     public void process(CastExpr castExpr) {
         addToken(LEFT_PAREN);
-        // TODO: check expression == type or right part??
-        castExpr.getExpression().accept(visitor, this);
+        addTypeAsTokens(castExpr.getType());
         addToken(RIGHT_PAREN);
+        castExpr.getExpression().accept(visitor, this);
     }
 
     @Override
     public void process(ClassExpr classExpr) {
-        // TODO: check java.util.Type.class + Type<>
         addTypeAsTokens(classExpr.getType());
         addToken(DOT);
         addToken(CLASS);
@@ -200,7 +192,6 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(InstanceOfExpr instanceOfExpr) {
-        // TODO: check processing
         instanceOfExpr.getExpression().accept(visitor, this);
         addToken(INSTANCE_OF);
 
@@ -220,11 +211,7 @@ public class BasicStatementProcessor implements StatementProcessor {
         if (lambdaExpr.isEnclosingParameters()) {
             addToken(LEFT_PAREN);
         }
-        for (Parameter param : lambdaExpr.getParameters()) {
-            // TODO: check type processing if it is not present
-            addTypeAsTokens(param.getType());
-            addToken(param.getNameAsString());
-        }
+        addParameterElemList(lambdaExpr.getParameters());
         if (lambdaExpr.isEnclosingParameters()) {
             addToken(RIGHT_PAREN);
         }
@@ -282,38 +269,17 @@ public class BasicStatementProcessor implements StatementProcessor {
         });
 
         // generic types
-        boolean isNotFirst = false;
         Optional<NodeList<Type>> typeArguments = methodCallExpr.getTypeArguments();
         if (typeArguments.isPresent()) {
             addToken(LOWER);
-
-
-            for (Type type : typeArguments.get()) {
-                if (isNotFirst) {
-                    addToken(COMMA);
-                } else {
-                    isNotFirst = true;
-                }
-
-                addTypeAsTokens(type);
-            }
-
+            addTypeElemList(typeArguments.get(), COMMA);
             addToken(GREATER);
         }
 
         // id + params
         addToken(methodCallExpr.getName().asString());
         addToken(LEFT_PAREN);
-        isNotFirst = false;
-        for (Expression arg : methodCallExpr.getArguments()) {
-            if (isNotFirst) {
-                addToken(COMMA);
-            } else {
-                isNotFirst = true;
-            }
-
-            arg.accept(visitor, this);
-        }
+        addExpressionElemList(methodCallExpr.getArguments(), COMMA);
         addToken(RIGHT_PAREN);
     }
 
@@ -325,22 +291,10 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(COLON);
 
         // generic params
-        boolean isNotFirst = false;
         Optional<NodeList<Type>> typeArguments = methodReferenceExpr.getTypeArguments();
         if (typeArguments.isPresent()) {
             addToken(LOWER);
-
-
-            for (Type type : typeArguments.get()) {
-                if (isNotFirst) {
-                    addToken(COMMA);
-                } else {
-                    isNotFirst = true;
-                }
-
-                addTypeAsTokens(type);
-            }
-
+            addTypeElemList(typeArguments.get(), COMMA);
             addToken(GREATER);
         }
 
@@ -367,29 +321,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
         // params
         addToken(LEFT_PAREN);
-        boolean isNotFirst = false;
-        for (Expression arg : objectCreationExpr.getArguments()) {
-            if (isNotFirst) {
-                addToken(COMMA);
-            } else {
-                isNotFirst = true;
-            }
-
-            arg.accept(visitor, this);
-        }
+        addExpressionElemList(objectCreationExpr.getArguments(), COMMA);
         addToken(RIGHT_PAREN);
-
-        // anonymous class
-        // TODO: check
-        objectCreationExpr.getAnonymousClassBody().ifPresent(bodyDeclarations -> {
-            addToken(LEFT_BRACE);
-
-            for (BodyDeclaration<?> body : bodyDeclarations) {
-                body.accept(visitor, this);
-            }
-
-            addToken(RIGHT_BRACE);
-        });
     }
 
     @Override
@@ -408,48 +341,28 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(SUPER);
     }
 
+    // !!! Parser don't recognize this (Switch expression with return via break):
+    // int value = switch (count) {
+    //            case 1:
+    //                break 1 + 3;
+    //            case 2:
+    //                break 32;
+    //            case 3:
+    //                break 52;
+    //            default:
+    //                break 0;
+    //        };
     @Override
     public void process(SwitchExpr switchExpr) {
-        addToken(SWITCH);
-
-        // selector
-        addToken(LEFT_PAREN);
-        switchExpr.getSelector().accept(visitor, this);
-        addToken(RIGHT_PAREN);
-
-        // entries
-        addToken(LEFT_BRACE);
-        for (SwitchEntry entry : switchExpr.getEntries()) {
-            addToken(CASE);
-
-            // case conditions
-            boolean isNotFirst = false;
-            for (Expression label : entry.getLabels()) {
-                if (isNotFirst) {
-                    addToken(COMMA);
-                } else {
-                    isNotFirst = true;
-                }
-
-                label.accept(visitor, this);
-            }
-
-            // after case label there can be ":" or "->"
-            if (entry.getType() == SwitchEntry.Type.STATEMENT_GROUP) {
-                addToken(COLON);
-            } else {
-                addToken(LAMBDA);
-            }
-
-            // entry body
-            entry.getStatements().forEach(body -> body.accept(visitor, this));
-        }
-        addToken(RIGHT_BRACE);
+        addSwitch(switchExpr.getSelector(), switchExpr.getEntries());
     }
 
     @Override
     public void process(ThisExpr thisExpr) {
-        thisExpr.getTypeName().ifPresent(this::addComplexName);
+        thisExpr.getTypeName().ifPresent(name -> {
+            addComplexName(name);
+            addToken(DOT);
+        });
         addToken(THIS);
     }
 
@@ -471,31 +384,31 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     // every var in the list are represented as "type id = Expr",
     // cause there can be construction "int[] ar1, ar2[];"
-    // PS: shortly - "int[] ar1, ar2[];" -> "int[] ar1, int[][] ar2;"
-    // TODO: check semicolon insertion in stmt processing
+    // PS: shortly - "int[] ar1, ar2[];" -> "int[] ar1; int[][] ar2;"
     @Override
     public void process(VariableDeclarationExpr variableDeclarationExpr) {
-        // TODO: check modifiers
-        // modifiers
-        variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString()));
 
         // var list
         boolean isNotFirst = false;
         for (VariableDeclarator var : variableDeclarationExpr.getVariables()) {
             if (isNotFirst) {
-                addToken(COMMA);
+                addToken(SEMICOLON);
             } else {
                 isNotFirst = true;
             }
 
+            // modifiers (without delimiter, because there can only be final modifier)
+            variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString()));
 
-            // TODO: rework
+            // Type + id
             addTypeAsTokens(var.getType());
             addToken(var.getNameAsString());
 
-            // TODO: check "=" insertion
-            addToken(ASSIGN);
-            var.getInitializer().ifPresent(init -> init.accept(visitor, this));
+            // initializer
+            var.getInitializer().ifPresent(init -> {
+                addToken(ASSIGN);
+                init.accept(visitor, this);
+            });
         }
     }
 
@@ -559,20 +472,10 @@ public class BasicStatementProcessor implements StatementProcessor {
         } else {
             addToken(SUPER);
         }
-        addToken(DOT);
 
         // arguments
         addToken(LEFT_PAREN);
-        boolean isNotFirst = false;
-        for (Expression arg : explicitConstructorInvocationStmt.getArguments()) {
-            if (isNotFirst) {
-                addToken(COMMA);
-            } else {
-                isNotFirst = true;
-            }
-
-            arg.accept(visitor, this);
-        }
+        addExpressionElemList(explicitConstructorInvocationStmt.getArguments(), COMMA);
         addToken(RIGHT_PAREN);
     }
 
@@ -580,7 +483,6 @@ public class BasicStatementProcessor implements StatementProcessor {
     public void process(ForEachStmt forEachStmt) {
         addToken(FOR);
 
-        // TODO: check
         // var definition
         addToken(LEFT_PAREN);
         forEachStmt.getVariable().accept(visitor, this);
@@ -600,17 +502,7 @@ public class BasicStatementProcessor implements StatementProcessor {
 
         addToken(LEFT_PAREN);
         // var definition
-        boolean isNotFirst = false;
-        // TODO: check
-        for (Expression definition : forStmt.getInitialization()) {
-            if (isNotFirst) {
-                addToken(COMMA);
-            } else {
-                isNotFirst = true;
-            }
-
-            definition.accept(visitor, this);
-        }
+        addExpressionElemList(forStmt.getInitialization(), COMMA);
         addToken(SEMICOLON);
 
         // condition
@@ -618,16 +510,7 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(SEMICOLON);
 
         // progress
-        isNotFirst = false;
-        for (Expression update : forStmt.getUpdate()) {
-            if (isNotFirst) {
-                addToken(COMMA);
-            } else {
-                isNotFirst = true;
-            }
-
-            update.accept(visitor, this);
-        }
+        addExpressionElemList(forStmt.getUpdate(), COMMA);
         addToken(RIGHT_PAREN);
 
         // body
@@ -644,7 +527,6 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(RIGHT_PAREN);
 
         // then
-        // TODO: check with body and without (single statement)
         ifStmt.getThenStmt().accept(visitor, this);
 
         // else
@@ -678,44 +560,9 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(SEMICOLON);
     }
 
-    //TODO: same as SwitchExpr
     @Override
     public void process(SwitchStmt switchStmt) {
-        addToken(SWITCH);
-
-        // selector
-        addToken(LEFT_PAREN);
-        switchStmt.getSelector().accept(visitor, this);
-        addToken(RIGHT_PAREN);
-
-        // entries
-        addToken(LEFT_BRACE);
-        for (SwitchEntry entry : switchStmt.getEntries()) {
-            addToken(CASE);
-
-            // case conditions
-            boolean isNotFirst = false;
-            for (Expression label : entry.getLabels()) {
-                if (isNotFirst) {
-                    addToken(COMMA);
-                } else {
-                    isNotFirst = true;
-                }
-
-                label.accept(visitor, this);
-            }
-
-            // after case label there can be ":" or "->"
-            if (entry.getType() == SwitchEntry.Type.STATEMENT_GROUP) {
-                addToken(COLON);
-            } else {
-                addToken(LAMBDA);
-            }
-
-            // entry body
-            entry.getStatements().forEach(body -> body.accept(visitor, this));
-        }
-        addToken(RIGHT_BRACE);
+        addSwitch(switchStmt.getSelector(), switchStmt.getEntries());
     }
 
     @Override
@@ -735,6 +582,7 @@ public class BasicStatementProcessor implements StatementProcessor {
     public void process(ThrowStmt throwStmt) {
         addToken(THROW);
         throwStmt.getExpression().accept(visitor, this);
+        addToken(SEMICOLON);
     }
 
     @Override
@@ -742,21 +590,9 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(TRY);
 
         // resources
-        boolean isNotFirst = false;
         if (tryStmt.getResources().size() != 0) {
             addToken(LEFT_PAREN);
-
-            // TODO: extract printing list of something in other method
-            for (Expression resource : tryStmt.getResources()) {
-                if (isNotFirst) {
-                    addToken(COMMA);
-                } else {
-                    isNotFirst = true;
-                }
-
-                resource.accept(visitor, this);
-            }
-
+            addExpressionElemList(tryStmt.getResources(), SEMICOLON);
             addToken(RIGHT_PAREN);
         }
 
@@ -769,9 +605,7 @@ public class BasicStatementProcessor implements StatementProcessor {
 
             // exception type
             addToken(LEFT_PAREN);
-                // TODO: check type processing if it is not present
-            addTypeAsTokens(catchClause.getParameter().getType());
-            addToken(catchClause.getParameter().getNameAsString());
+            addParameterElemList(Collections.singleton(catchClause.getParameter()));
             addToken(RIGHT_PAREN);
 
             // body
@@ -780,14 +614,14 @@ public class BasicStatementProcessor implements StatementProcessor {
 
         // final-block
         tryStmt.getFinallyBlock().ifPresent(finalBlock -> {
-            addToken(FINAL);
+            addToken(FINALLY);
             finalBlock.accept(visitor, this);
         });
     }
 
     @Override
     public void process(UnparsableStmt unparsableStmt) {
-        // TODO: poka tak
+        // mere add as a string
         addToken(unparsableStmt.toString());
     }
 
@@ -801,7 +635,6 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(RIGHT_PAREN);
 
         // body
-        // TODO: check with single statement body and with block
         whileStmt.getBody().accept(visitor, this);
     }
 
@@ -816,6 +649,83 @@ public class BasicStatementProcessor implements StatementProcessor {
     public void process(ExpressionStmt expressionStmt) {
         expressionStmt.getExpression().accept(visitor, this);
         addToken(SEMICOLON);
+    }
+
+    // Обработка SwitchExpr и SwitchStmt
+    protected void addSwitch(Expression selector, NodeList<SwitchEntry> entries) {
+        addToken(SWITCH);
+
+        // selector
+        addToken(LEFT_PAREN);
+        selector.accept(visitor, this);
+        addToken(RIGHT_PAREN);
+
+        // entries
+        addToken(LEFT_BRACE);
+        for (SwitchEntry entry : entries) {
+            // case conditions
+            if (entry.getLabels().size() == 0) {
+                addToken(DEFAULT);
+            } else {
+                addToken(CASE);
+                addExpressionElemList(entry.getLabels(), COMMA);
+            }
+
+            // after case label there can be ":" or "->"
+            if (entry.getType() == SwitchEntry.Type.STATEMENT_GROUP) {
+                addToken(COLON);
+            } else {
+                addToken(LAMBDA);
+            }
+
+            // entry body
+            entry.getStatements().forEach(body -> body.accept(visitor, this));
+        }
+        addToken(RIGHT_BRACE);
+    }
+
+    // Добавляет список параметров с их модификаторами, типом и идентификатором
+    protected void addParameterElemList(Iterable<Parameter> iterable) {
+        boolean isNotFirst = false;
+        for (Parameter param : iterable) {
+            if (isNotFirst) {
+                addToken(COMMA);
+            } else {
+                isNotFirst = true;
+            }
+
+            param.getModifiers().forEach(modifier -> addToken(modifier.toString()));
+            addTypeAsTokens(param.getType());
+            addToken(param.getNameAsString());
+        }
+    }
+
+    // Добавить список типов с указанным разделителем
+    protected void addTypeElemList(Iterable<? extends Type> iterable, String delimiter) {
+        boolean isNotFirst = false;
+        for (Type type : iterable) {
+            if (isNotFirst) {
+                addToken(delimiter);
+            } else {
+                isNotFirst = true;
+            }
+
+            addTypeAsTokens(type);
+        }
+    }
+
+    // Добавить список выражений с указанным разделителем
+    protected void addExpressionElemList(Iterable<Expression> iterable, String delimiter) {
+        boolean isNotFirst = false;
+        for (Expression arg : iterable) {
+            if (isNotFirst) {
+                addToken(delimiter);
+            } else {
+                isNotFirst = true;
+            }
+
+            arg.accept(visitor, this);
+        }
     }
 
     protected void addToken(String lexeme) {
@@ -869,18 +779,7 @@ public class BasicStatementProcessor implements StatementProcessor {
             // generic params
             if (t.getTypeArguments().isPresent()) {
                 addToken(LOWER);
-
-                boolean isNotFirst = false;
-                for (Type param : t.getTypeArguments().get()) {
-                    if (isNotFirst) {
-                        addToken(COMMA);
-                    } else {
-                        isNotFirst = true;
-                    }
-
-                    addTypeAsTokens(param);
-                }
-
+                addTypeElemList(t.getTypeArguments().get(), COMMA);
                 addToken(GREATER);
             }
             return;
@@ -891,32 +790,12 @@ public class BasicStatementProcessor implements StatementProcessor {
         }
         if (type.isIntersectionType()) {
             IntersectionType intersectionType = (IntersectionType) type;
-            boolean isNotFirst = false;
-
-            for (ReferenceType t : intersectionType.getElements()) {
-                if (isNotFirst) {
-                    addToken(INTERSECTION);
-                } else {
-                    isNotFirst = true;
-                }
-
-                addTypeAsTokens(t);
-            }
+            addTypeElemList(intersectionType.getElements(), INTERSECTION);
             return;
         }
         if (type.isUnionType()) {
             UnionType unionType = (UnionType) type;
-            boolean isNotFirst = false;
-
-            for (ReferenceType t : unionType.getElements()) {
-                if (isNotFirst) {
-                    addToken(UNION);
-                } else {
-                    isNotFirst = true;
-                }
-
-                addTypeAsTokens(t);
-            }
+            addTypeElemList(unionType.getElements(), UNION);
             return;
         }
         if (type.isWildcardType()) {

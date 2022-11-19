@@ -99,6 +99,14 @@ public class DefinedFunction implements IStructure {
         return body;
     }
 
+    public boolean isTokenized() {
+        return isTokenized;
+    }
+
+    public void tokenized() {
+        isTokenized = true;
+    }
+
     public void addToken(Integer token) {
         tokens.add(token);
     }

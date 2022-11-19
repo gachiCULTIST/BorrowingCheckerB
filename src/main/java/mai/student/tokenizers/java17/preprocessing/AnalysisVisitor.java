@@ -6,6 +6,7 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.type.ArrayType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
@@ -47,6 +48,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         FileRepresentative file = (FileRepresentative) arg;
 
         // TODO: сохраняю на всякий случай звездочку (не помню - она где-то обрабатывается?)
+        //  проверить при реализации SearchUtility
         if (declaration.isStatic()) {
             file.staticImports.add(declaration.getNameAsString() + (declaration.isAsterisk() ? "*" : ""));
         } else {
@@ -58,8 +60,85 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
     @Override
     public List<IStructure> visit(RecordDeclaration recordDeclaration, IStructure arg) {
-        // TODO
-        return null;
+        // Обработка реализуемых интерфейсов
+        ArrayList<Type> inheritanceList = new ArrayList<>();
+        for (ClassOrInterfaceType inhInterface : recordDeclaration.getImplementedTypes()) {
+            inheritanceList.add(fromParserToMyType(inhInterface));
+        }
+
+        // Обработка параметров записи
+        List<TypeParameter> parserParams = recordDeclaration.getTypeParameters();
+        Type[] params = new Type[parserParams.size()];
+        for (int i = 0; i < params.length; ++i) {
+            params[i] = fromParserToMyType(parserParams.get(i));
+        }
+
+        // Начальная инициализация
+        DefinedClass result = new DefinedClass(recordDeclaration.getNameAsString(), params, inheritanceList, arg);
+
+        // Обработка внутренностей
+        List<IStructure> children = super.visit(recordDeclaration, result);
+        processChildren(result, children);
+
+        // Добавление конструктора по умолчанию, если ни одного не было объявлено
+        boolean hasDefault = result.functions.stream().reduce(false,
+                (f, i) -> f.equals(true) || i.getName().equals(result.getName()),
+                (r1, r2) -> r1 || r2);
+        if (!hasDefault) {
+            DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), new Type[0], new Type[0],
+                    result.getType(), result, null);
+            result.functions.add(defaultConstructor);
+        }
+
+        // Добавление параметры в виде переменных
+        for (Parameter parameter : recordDeclaration.getParameters()) {
+            VariableOrConst p = new VariableOrConst(fromParserToMyType(parameter.getType()),
+                    parameter.getNameAsString(), result, parameter.getBegin().orElse(null));
+
+            result.variablesAndConsts.add(p);
+
+            // Добавление геттеров для параметров
+            boolean hasSame = result.functions.stream().reduce(false,
+                    (f, i) -> f.equals(true) || i.getName().equals(parameter.getNameAsString()),
+                    (r1, r2) -> r1 || r2);
+            if (!hasSame) {
+                DefinedFunction getter = new DefinedFunction(parameter.getNameAsString(), new Type[0], new Type[0],
+                        p.getType(), result, null);
+                result.functions.add(getter);
+            }
+        }
+
+        // Добавление канонического конструктора
+
+            // Тело если есть компактный конструктор
+        BlockStmt compactBody = recordDeclaration.getCompactConstructors().stream().reduce(null,
+                (acc, i) -> i.getBody(),
+                (r1, r2) -> r1 == null ? r2 : r1);
+
+            // Определяем параметры для канонического конструктора
+        Type[] recordParameters = recordDeclaration.getParameters().stream().map(Parameter::getType).
+                map(AnalysisVisitor::fromParserToMyType).toArray(Type[]::new);
+
+            // Проверяем есть ли канонический конструктор
+        boolean hasCanonical = result.functions.stream().reduce(false,
+                (f, i) -> {
+                    if (!f && i.getName().equals(result.getName())) {
+                        return Type.equalsTypeArrays(i.getArgTypes(), recordParameters);
+                    }
+                    return f;
+                },
+                (r1, r2) -> r1 || r2);
+
+            // Добавляем канонический конструктор, если его нет
+        if (!hasCanonical) {
+            DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), recordParameters, new Type[0],
+                    result.getType(), result, compactBody);
+            result.functions.add(defaultConstructor);
+        }
+
+        return new LinkedList<>(){{
+            add(result);
+        }};
     }
 
     @Override
@@ -210,7 +289,6 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         }};
     }
 
-    // TODO: copy (almost) of MethodDeclaration visitor
     @Override
     public List<IStructure> visit(ConstructorDeclaration declaration, IStructure arg) {
 
@@ -284,18 +362,18 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
             return Type.getVoidType();
         }
         if (type.isIntersectionType()) {
-            // TODO: для типов вида Type1 & Type2 пока вот так - потом подумаю
+            // для типов вида Type1 & Type2 пока вот так
             return Type.getUndefinedType();
         }
         if (type.isUnionType()) {
-            // TODO: для типов вида Exception1 | Exception2 пока вот так - потом подумаю
+            // для типов вида Exception1 | Exception2 пока вот так
             return Type.getExceptionType();
         }
         if (type.isVarType()) {
             return Type.getVarType();
         }
         if (type.isWildcardType()) {
-            // TODO: для ? пока вот так
+            // для ? пока вот так
             return Type.getObjectType();
         }
 

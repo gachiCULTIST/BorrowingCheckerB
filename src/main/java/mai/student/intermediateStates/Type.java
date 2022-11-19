@@ -142,6 +142,21 @@ public class Type {
         return false;
     }
 
+    // Сравнение массивов параметров
+    public static boolean equalsTypeArrays(Type[] arg1, Type[] arg2) {
+        if (arg1.length != arg2.length) {
+            return false;
+        }
+
+        for (int i = 0; i < arg1.length; ++i) {
+            if (!arg1[i].equals(arg2[i])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static boolean isAutoCast(Type type, Type[] casting) {
         for (Type cast : casting) {
             if (type.equals(cast)) {

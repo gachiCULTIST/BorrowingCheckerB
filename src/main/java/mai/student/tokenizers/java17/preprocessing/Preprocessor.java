@@ -35,7 +35,8 @@ public class Preprocessor {
         typeSolver.add(new JavaParserTypeSolver(file.getFilePath().getParent()));
 
         StaticJavaParser.setConfiguration(new ParserConfiguration().setAttributeComments(false).
-                setSymbolResolver(new JavaSymbolSolver(typeSolver)));
+                setSymbolResolver(new JavaSymbolSolver(typeSolver)).
+                setLanguageLevel(ParserConfiguration.LanguageLevel.CURRENT));
     }
 
     public void preprocess() {
