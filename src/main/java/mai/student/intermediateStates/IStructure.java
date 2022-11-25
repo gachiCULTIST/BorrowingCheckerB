@@ -2,6 +2,7 @@ package mai.student.intermediateStates;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public interface IStructure {
     String getName();
@@ -12,10 +13,16 @@ public interface IStructure {
         return null;
     }
 
+    default void actuateTypes(ArrayList<FileRepresentative> files) {}
+
+    default boolean isLinked() {
+        return true;
+    }
+
     // Поиск сущности
     // Параметр isPartOfInheritanceTree за рамки поиска, если он истинен то поиск не выходит за рамки дерева населодования
     // (сам посебе предотвращает зацыкиванывания поиска в нескольких файлах со связанными классами)
-    static IStructure findEntity(ArrayList<FileRepresentative> files, IStructure searchOrigin, String entityName,
+    static IStructure findEntity(List<FileRepresentative> files, IStructure searchOrigin, String entityName,
                                  boolean isPartOfInheritanceTree, HashMap<String, Type> params) {
         IStructure result = null;
 
@@ -62,7 +69,12 @@ public interface IStructure {
                         IStructure linkToClass = findEntity(files, definedClass.parent, inhClass.getName(),
                                 false, null);
                         if (linkToClass != null) {
-                            definedClass.linksToAncestors.add((DefinedClass) linkToClass);
+//                            System.out.println(definedClass.parent.getName() + " " + inhClass.getName() + " " + linkToClass.getParent().getName());
+                            if (linkToClass.getStrucType() == StructureType.Function) {
+                                definedClass.linksToAncestors.add((DefinedClass) linkToClass.getParent());
+                            } else {
+                                definedClass.linksToAncestors.add((DefinedClass) linkToClass);
+                            }
                         }
                     }
                 }
@@ -108,7 +120,7 @@ public interface IStructure {
 
             if (staticImportedPack != null) {
                 for (FileRepresentative f : files) {
-                    if (staticImportedPack.startsWith(f.curPackage)) {
+                    if (f.curPackage != null && staticImportedPack.startsWith(f.curPackage)) {
                         for (DefinedClass innerClass : f.classes) {
                             if (staticImportedPack.contains("." + innerClass.getName() + ".")) {
                                 for (VariableOrConst var : innerClass.variablesAndConsts) {
@@ -139,7 +151,7 @@ public interface IStructure {
 
             // check current package
             for (FileRepresentative f : files) {
-                if (f.curPackage.equals(file.curPackage)) {
+                if (f.curPackage != null && f.curPackage.equals(file.curPackage)) {
                     for (DefinedClass innerClass : f.classes) {
                         if (innerClass.getName().equals(entityName)) {
                             return innerClass;
@@ -158,7 +170,7 @@ public interface IStructure {
 
             if (importedPack != null) {
                 for (FileRepresentative f : files) {
-                    if (importedPack.startsWith(f.curPackage)) {
+                    if (f.curPackage != null && importedPack.startsWith(f.curPackage)) {
                         for (DefinedClass innerClass : f.classes) {
                             if (innerClass.getName().equals(entityName)) {
                                 return innerClass;

@@ -24,6 +24,12 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     // Используется для отделения внутренних классов перечислений от классов представляющих констант
     private static final String ENUM_INNER_PREFIX = "?ENUM_";
 
+    private final Map<CallableDeclaration<?>, DefinedFunction> methodMatcher;
+
+    public AnalysisVisitor(Map<CallableDeclaration<?>, DefinedFunction> methodMatcher) {
+        this.methodMatcher = methodMatcher;
+    }
+
     @Override
     public List<IStructure> visit(CompilationUnit unit, IStructure arg) {
         FileRepresentative file = (FileRepresentative) arg;
@@ -86,7 +92,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                 (r1, r2) -> r1 || r2);
         if (!hasDefault) {
             DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), new Type[0], new Type[0],
-                    result.getType(), result, null);
+                    result.getType(), result, null, null);
             result.functions.add(defaultConstructor);
         }
 
@@ -103,7 +109,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                     (r1, r2) -> r1 || r2);
             if (!hasSame) {
                 DefinedFunction getter = new DefinedFunction(parameter.getNameAsString(), new Type[0], new Type[0],
-                        p.getType(), result, null);
+                        p.getType(), result, null, null);
                 result.functions.add(getter);
             }
         }
@@ -132,7 +138,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
             // Добавляем канонический конструктор, если его нет
         if (!hasCanonical) {
             DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), recordParameters, new Type[0],
-                    result.getType(), result, compactBody);
+                    result.getType(), result, compactBody, null);
             result.functions.add(defaultConstructor);
         }
 
@@ -174,7 +180,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                 (r1, r2) -> r1 || r2);
         if (!hasDefault) {
             DefinedFunction defaultConstructor = new DefinedFunction(result.getName(), new Type[0], new Type[0],
-                    result.getType(), result, null);
+                    result.getType(), result, null, null);
             result.functions.add(defaultConstructor);
         }
 
@@ -192,7 +198,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         }
 
         // Начальная инициализация
-        DefinedClass result = new DefinedClass(declaration.getNameAsString(), null, inheritanceList, arg);
+        DefinedClass result = new DefinedClass(declaration.getNameAsString(), new Type[0], inheritanceList, arg);
 
         // Обработка внутренностей
         List<IStructure> children = super.visit(declaration, result);
@@ -213,7 +219,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         // Начальная инициализация
         DefinedClass resultClass = new DefinedClass(ENUM_INNER_PREFIX + declaration.getNameAsString(),
-                null, inheritanceList, arg);
+                new Type[0], inheritanceList, arg);
         VariableOrConst resultVar = new VariableOrConst(resultClass.getType(), declaration.getNameAsString(), arg,
                 declaration.getBegin().orElse(null));
 
@@ -264,7 +270,8 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         // Объявление целевого метода
         DefinedFunction result = new DefinedFunction(declaration.getNameAsString(), argParams, params, returnValue,
-                (DefinedClass) arg, declaration.getBody().orElse(null));
+                (DefinedClass) arg, declaration.getBody().orElse(null), declaration);
+        methodMatcher.put(declaration, result);
 
         // Обработка параметров функции
         for (int i = 0; i < argParams.length; ++i) {
@@ -309,7 +316,8 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
         // Объявление целевого конструктора
         DefinedFunction result = new DefinedFunction(declaration.getNameAsString(), argParams, params, returnValue,
-                (DefinedClass) arg, declaration.getBody());
+                (DefinedClass) arg, declaration.getBody(), declaration);
+        methodMatcher.put(declaration, result);
 
         // Обработка параметров функции
         for (int i = 0; i < argParams.length; ++i) {
@@ -356,7 +364,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
             return new Type(t.getNameAsString(), params);
         }
         if (type.isTypeParameter()) {
-            return new Type(type.asTypeParameter().getNameAsString());
+            return new Type(type.asTypeParameter().getNameAsString(), true);
         }
         if (type.isVoidType()) {
             return Type.getVoidType();

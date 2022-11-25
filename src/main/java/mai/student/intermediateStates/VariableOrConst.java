@@ -1,8 +1,9 @@
 package mai.student.intermediateStates;
 
 import com.github.javaparser.Position;
-import mai.student.intermediateStates.DefinedClass;
-import mai.student.intermediateStates.IStructure;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,9 +11,15 @@ import java.util.HashMap;
 // Класс для представления переменных и констант
 public class VariableOrConst implements IStructure {
 
+    private static final String TYPE_ARRAY = "Array";
+
     private Type type;
-    public Type realType = null;
+    private Type realType = null;
+
+    @Deprecated
     public DefinedClass linkToType = null;
+
+    // TODO: check usage after tokenizer release
     public HashMap<Type, Type> params = new HashMap<>();
     private String identifier;
 
@@ -25,6 +32,10 @@ public class VariableOrConst implements IStructure {
 
     // For Parser
     private Position position;
+
+    private boolean isLinked = false;
+
+    private ObjectCreationExpr replacer = null;
 
     public VariableOrConst(Type type, String identifier, IStructure parent, Position position) {
         this.type = type;
@@ -45,27 +56,30 @@ public class VariableOrConst implements IStructure {
         this.startIndex = startIndex;
     }
 
-    @Deprecated
-    public VariableOrConst(Type type, String identifier, int startIndex, DefinedFunction function,
-                           ArrayList<FileRepresentative> files) {
-        this.type = type;
-        this.identifier = identifier;
-        this.startIndex = startIndex;
-
-        IStructure link = IStructure.findEntity(files, function, this.type.getName(), false, null);
-        if (link != null) {
-            if (link.getStrucType() == StructureType.Class) {
-                this.linkToType = (DefinedClass) link;
-            } else {
-                this.linkToType = ((DefinedFunction) link).parent;
-            }
-        } else {
-            this.linkToType = null;
-        }
-    }
-
     public Type getType() {
         return type;
+    }
+
+    public Type getRealType() {
+        return realType;
+    }
+
+    public void setRealType(Type realType) {
+        this.realType = realType;
+
+        if (realType != null) {
+            if (realType.getName().equals(TYPE_ARRAY)) {
+                replacer = null;
+            } else {
+                replacer = new ObjectCreationExpr(null, realType.toClassOrInterfaceType(), new NodeList<>());
+            }
+        } else {
+            if (type.getName().equals(TYPE_ARRAY)) {
+                replacer = null;
+            } else {
+                replacer = new ObjectCreationExpr(null, type.toClassOrInterfaceType(), new NodeList<>());
+            }
+        }
     }
 
     @Override
@@ -81,6 +95,50 @@ public class VariableOrConst implements IStructure {
     @Override
     public IStructure getParent() {
         return parent;
+    }
+
+    public ObjectCreationExpr getReplacer() {
+        return replacer;
+    }
+
+    @Override
+    public void actuateTypes(ArrayList<FileRepresentative> files) {
+        if (isLinked) {
+            return;
+        }
+
+        isLinked = true;
+
+        // Обновление связей
+        type.updateLink(parent, files);
+        if (realType != null) {
+            realType.updateLink(parent, files);
+        }
+        params.forEach((key, value) -> {
+            key.updateLink(parent, files);
+            value.updateLink(parent, files);
+        });
+        parent.actuateTypes(files);
+
+        // Создание заменителя в выражении
+        if (realType != null) {
+            if (realType.getName().equals(TYPE_ARRAY) || realType.linkToClass == null) {
+                replacer = null;
+            } else {
+                replacer = new ObjectCreationExpr(null, realType.toClassOrInterfaceType(), new NodeList<>());
+            }
+        } else {
+            if (type.getName().equals(TYPE_ARRAY) || type.linkToClass == null) {
+                replacer = null;
+            } else {
+                replacer = new ObjectCreationExpr(null, type.toClassOrInterfaceType(), new NodeList<>());
+            }
+        }
+    }
+
+    @Override
+    public boolean isLinked() {
+        return isLinked;
     }
 
     public Position getPosition() {

@@ -1,12 +1,9 @@
 package mai.student.intermediateStates;
 
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import org.checkerframework.checker.units.qual.A;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 // Класс для представления классов сравниваемых прграмм и интерфейсов
 public class DefinedClass implements IStructure {
@@ -29,6 +26,9 @@ public class DefinedClass implements IStructure {
 
     // Параметризирование
     private boolean isParametrized = false;
+
+    private boolean isLinked = false;
+
     private Type[] params;
 
     public IStructure parent;
@@ -86,6 +86,27 @@ public class DefinedClass implements IStructure {
         return parent;
     }
 
+    @Override
+    public void actuateTypes(ArrayList<FileRepresentative> files) {
+        if (isLinked) {
+            return;
+        }
+
+        isLinked = true;
+
+        innerClasses.forEach(i -> i.actuateTypes(files));
+        functions.forEach(i -> i.actuateTypes(files));
+        variablesAndConsts.forEach(i -> i.actuateTypes(files));
+        inheritanceList.forEach(i -> i.updateLink(parent, files));
+        Arrays.stream(params).forEach(i -> i.updateLink(parent, files));
+        parent.actuateTypes(files);
+    }
+
+    @Override
+    public boolean isLinked() {
+        return isLinked;
+    }
+
     public Type getType() {
         ArrayList<Type> params = new ArrayList<>();
         if (this.isParametrized) {
@@ -97,6 +118,10 @@ public class DefinedClass implements IStructure {
     }
     @Deprecated
     public Type getType(ArrayList<Type> params){return new Type(className);}
+
+    public ClassOrInterfaceType getClassOrInterfaceType() {
+        return new ClassOrInterfaceType(null, className);
+    }
 
     public int getStartIndex() {
         return startIndex;

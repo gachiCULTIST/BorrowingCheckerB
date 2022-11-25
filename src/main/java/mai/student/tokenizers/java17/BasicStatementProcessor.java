@@ -397,8 +397,9 @@ public class BasicStatementProcessor implements StatementProcessor {
                 isNotFirst = true;
             }
 
-            // modifiers (without delimiter, because there can only be final modifier)
-            variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString()));
+            // modifiers
+            //  PS: parser returns modifier with whitespace
+            variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString().strip()));
 
             // Type + id
             addTypeAsTokens(var.getType());
@@ -694,7 +695,7 @@ public class BasicStatementProcessor implements StatementProcessor {
                 isNotFirst = true;
             }
 
-            param.getModifiers().forEach(modifier -> addToken(modifier.toString()));
+            param.getModifiers().forEach(modifier -> addToken(modifier.toString().strip()));
             addTypeAsTokens(param.getType());
             addToken(param.getNameAsString());
         }

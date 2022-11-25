@@ -1,5 +1,6 @@
 package mai.student.tokenizers.java17;
 
+import com.github.javaparser.ast.body.CallableDeclaration;
 import mai.student.UtilityClass;
 import mai.student.intermediateStates.*;
 import mai.student.tokenizers.AbstractTokenizer;
@@ -68,9 +69,10 @@ public class JavaTokenizer extends AbstractTokenizer {
         // TODO: for test - delete
         Clock timer = Clock.systemDefaultZone();
 
+        Map<CallableDeclaration<?>, DefinedFunction> methodMatcher = new HashMap<>();
         for (FileRepresentative file : files) {
             long time = timer.millis();
-            new Preprocessor(file).preprocess();
+            new Preprocessor(file, methodMatcher).preprocess();
             totalTime += timer.millis() - time;
 //            System.out.println(file.code);
             UtilityClass.printInsideStructure(file, 0);
@@ -83,33 +85,33 @@ public class JavaTokenizer extends AbstractTokenizer {
         }
 
         log.info("Tokenizing started.");
-        BasicStatementProcessor processor = new BasicStatementProcessor(tokens, mainFunc, files, new TokenizerVisitor());
+        BasicStatementProcessor processor = new AbstractingStatementProcessor(tokens, mainFunc, files, new TokenizerVisitor(), methodMatcher);
         processor.run();
         result = mainFunc.tokens;
 
 //         Запись результатов теста
-        try (FileWriter saveResult = new FileWriter(files.get(0).getFilePath().getParent() + "/results/"
-                + files.get(0).getFilePath().getFileName() + "_result.txt", false)) {
-            StringBuilder result = new StringBuilder();
-            for (int i : mainFunc.tokens) {
-                String eq = "";
-                for (Map.Entry<String, Integer> var : tokens.entrySet()) {
-                    if (var.getValue() == i) {
-                        eq = var.getKey();
-                    }
-                }
-
-                result.append(i).append(eq).append(" ");
-                if (eq.equals("{") || eq.equals("}") || eq.equals(";")) {
-                    result.append('\n');
-                }
-            }
-
-            saveResult.write(result.toString());
-            saveResult.flush();
-        } catch (Exception ex) {
-            System.out.println(ex.getMessage());
-        }
+//        try (FileWriter saveResult = new FileWriter(files.get(0).getFilePath().getParent() + "/results/"
+//                + files.get(0).getFilePath().getFileName() + "_result.txt", false)) {
+//            StringBuilder result = new StringBuilder();
+//            for (int i : mainFunc.tokens) {
+//                String eq = "";
+//                for (Map.Entry<String, Integer> var : tokens.entrySet()) {
+//                    if (var.getValue() == i) {
+//                        eq = var.getKey();
+//                    }
+//                }
+//
+//                result.append(i).append(eq).append(" ");
+//                if (eq.equals("{") || eq.equals("}") || eq.equals(";")) {
+//                    result.append('\n');
+//                }
+//            }
+//
+//            saveResult.write(result.toString());
+//            saveResult.flush();
+//        } catch (Exception ex) {
+//            System.out.println(ex.getMessage());
+//        }
     }
 
     private DefinedFunction findMainFunction() {

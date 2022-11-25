@@ -1,9 +1,10 @@
 package mai.student.intermediateStates;
 
-import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.CallableDeclaration;
 import com.github.javaparser.ast.stmt.BlockStmt;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 // Класс для представления функций
 public class DefinedFunction implements IStructure {
@@ -36,14 +37,19 @@ public class DefinedFunction implements IStructure {
 
     // Представление токенов (только для методов, поскольку мы сводим все к монолиту)
     private boolean isTokenized = false;
+
+    private boolean isLinked = false;
+
     public ArrayList<Integer> tokens;
 
     // For Parser
     private BlockStmt body = null;
 
+    private CallableDeclaration<?> declaration = null;
+
     // For Parser
     public DefinedFunction(String funcName, Type[] argTypes, Type[] params, Type returnValue, DefinedClass parent,
-                           BlockStmt body) {
+                           BlockStmt body, CallableDeclaration<?> declaration) {
         this.funcName = funcName;
         this.argTypes = argTypes;
         this.startIndex = -1;
@@ -66,6 +72,8 @@ public class DefinedFunction implements IStructure {
         } else {
             this.body = body;
         }
+
+        this.declaration = declaration;
     }
 
     @Deprecated
@@ -99,6 +107,10 @@ public class DefinedFunction implements IStructure {
         return body;
     }
 
+    public CallableDeclaration<?> getDeclaration() {
+        return declaration;
+    }
+
     public boolean isTokenized() {
         return isTokenized;
     }
@@ -111,6 +123,10 @@ public class DefinedFunction implements IStructure {
         tokens.add(token);
     }
 
+    public void addFunctionTokens(DefinedFunction function) {
+        tokens.addAll(function.tokens);
+    }
+
     @Override
     public StructureType getStrucType() {
         return StructureType.Function;
@@ -119,6 +135,27 @@ public class DefinedFunction implements IStructure {
     @Override
     public IStructure getParent() {
         return parent;
+    }
+
+    @Override
+    public void actuateTypes(ArrayList<FileRepresentative> files) {
+        if (isLinked) {
+            return;
+        }
+
+        isLinked = true;
+
+        Arrays.stream(argTypes).forEach(i -> i.updateLink(parent, files));
+        Arrays.stream(params).forEach(i -> i.updateLink(parent, files));
+        returnValue.updateLink(parent, files);
+        innerClasses.forEach(i -> i.actuateTypes(files));
+        variablesAndConsts.forEach(i -> i.actuateTypes(files));
+        parent.actuateTypes(files);
+    }
+
+    @Override
+    public boolean isLinked() {
+        return isLinked;
     }
 
     public Type[] getArgTypes() {
@@ -179,8 +216,8 @@ public class DefinedFunction implements IStructure {
             if (args.get(i).getName().equals(TYPE_UNDEFINED)) {
                 continue;
             }
-            args.get(i).updateLinks(searchOrigin, files);
-            this.argTypes[i].updateLinks(searchOrigin, files);
+            args.get(i).updateLink(searchOrigin, files);
+            this.argTypes[i].updateLink(searchOrigin, files);
             if (!this.argTypes[i].equalsWithCompatibility(args.get(i), files)) {
                 return TypeCompatibility.NonCompatible;
             }

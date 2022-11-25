@@ -1,10 +1,17 @@
 package mai.student.intermediateStates;
 
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.expr.SimpleName;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 
 public class Type {
+
+    // analyzed type objects for general link init
+    private static final List<Type> typesToUpdate = new ArrayList<>();
 
     private static final String TYPE_BYTE = "byte";
     private static final String TYPE_DOUBLE = "double";
@@ -32,11 +39,18 @@ public class Type {
     private String name;
     private ArrayList<Type> params;
 
+    private boolean isLinkSet = false;
     DefinedClass linkToClass = null;
 
     public Type(String name) {
         this.name = name;
         this.params = new ArrayList<>();
+    }
+
+    public Type(String name, boolean isLinkSet) {
+        this.name = name;
+        this.params = new ArrayList<>();
+        this.isLinkSet = isLinkSet;
     }
 
     public Type(String name, ArrayList<Type> params) {
@@ -49,9 +63,22 @@ public class Type {
         }
     }
 
+    // TODO: check usage (is link always not null)
     public Type(String name, ArrayList<Type> params, DefinedClass link) {
         this.name = name;
         this.linkToClass = link;
+
+        if (params != null) {
+            this.params = params;
+        } else {
+            this.params = new ArrayList<>();
+        }
+    }
+
+    public Type(String name, ArrayList<Type> params, DefinedClass link, boolean isLinkSet) {
+        this.name = name;
+        this.linkToClass = link;
+        this.isLinkSet = isLinkSet;
 
         if (params != null) {
             this.params = params;
@@ -76,13 +103,17 @@ public class Type {
         this.linkToClass = linkToClass;
     }
 
+    public boolean isLinkSet() {
+        return isLinkSet;
+    }
+
     public Type clone() {
         ArrayList<Type> params = new ArrayList<>();
         for (Type p : this.params) {
             params.add(p.clone());
         }
 
-        return new Type(new String(this.name), params, this.linkToClass);
+        return new Type(this.name, params, this.linkToClass, this.isLinkSet);
     }
 
     public boolean equals(Type t2) {
@@ -184,8 +215,19 @@ public class Type {
         return result.toString();
     }
 
-    public void updateLinks(IStructure function, ArrayList<FileRepresentative> files) {
-        IStructure link = IStructure.findEntity(files, function, this.name, false, null);
+    public ClassOrInterfaceType toClassOrInterfaceType() {
+        NodeList<com.github.javaparser.ast.type.Type> typeArgs = new NodeList<>();
+        for (Type t : params) {
+            typeArgs.add(t.toClassOrInterfaceType());
+        }
+
+        return new ClassOrInterfaceType(null, new SimpleName(name), typeArgs);
+    }
+
+    public void updateLink(IStructure scope, ArrayList<FileRepresentative> files) {
+        this.isLinkSet = true;
+
+        IStructure link = IStructure.findEntity(files, scope, this.name, false, null);
         if (link != null) {
             if (link.getStrucType() == StructureType.Function) {
                 this.linkToClass = ((DefinedFunction) link).parent;
@@ -196,7 +238,7 @@ public class Type {
             this.linkToClass = null;
         }
         for (Type p : this.params) {
-            p.updateLinks(function, files);
+            p.updateLink(scope, files);
         }
     }
 
@@ -222,21 +264,21 @@ public class Type {
 
     // For Parser
     public static Type getVoidType() {
-        return new Type(TYPE_VOID);
+        return new Type(TYPE_VOID, true);
     }
 
     public static Type getUndefinedType() {
-        return new Type(TYPE_UNDEFINED);
+        return new Type(TYPE_UNDEFINED, true);
     }
 
     public static Type getExceptionType() {
-        return new Type(TYPE_EXCEPTION);
+        return new Type(TYPE_EXCEPTION, true);
     }
 
     public static Type getVarType() {
-        return new Type(TYPE_VAR);
+        return new Type(TYPE_VAR, true);
     }
     public static Type getObjectType() {
-        return new Type(TYPE_OBJECT);
+        return new Type(TYPE_OBJECT, true);
     }
 }
