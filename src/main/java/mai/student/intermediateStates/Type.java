@@ -36,6 +36,8 @@ public class Type {
     private static final Type[] integerAutoCast = {new Type(TYPE_LONG), new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
     private static final Type[] longAutoCast = {new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
     private static final Type[] floatAutoCast = {new Type(TYPE_DOUBLE)};
+
+    // TODO: подумать про добавление кволифаера (пакет)
     private String name;
     private ArrayList<Type> params;
 

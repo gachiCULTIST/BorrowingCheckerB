@@ -89,6 +89,21 @@ public class JavaTokenizer extends AbstractTokenizer {
         processor.run();
         result = mainFunc.tokens;
 
+        // Тест производительности секций
+        System.out.printf("!TEST!:%nParameter processing: %d%n\tLink updating: %d%n\tNode replacing: %d%n" +
+                "Inserting (and processing) method call: %d%n\tMethod types updating: %d%n\t" +
+                        "Method call tokenizing: %d%n\tMethod call tokens adding: %d%n\tMethod matching: %d%n\t" +
+                        "Method JavaParser resolving: %d%n",
+                AbstractingStatementProcessor.test1,
+                ExpressionModifierVisitor.test1,
+                ExpressionModifierVisitor.test2,
+                AbstractingStatementProcessor.test2,
+                AbstractingStatementProcessor.test3,
+                AbstractingStatementProcessor.test4,
+                AbstractingStatementProcessor.test5,
+                AbstractingStatementProcessor.test6,
+                AbstractingStatementProcessor.test7);
+
 //         Запись результатов теста
 //        try (FileWriter saveResult = new FileWriter(files.get(0).getFilePath().getParent() + "/results/"
 //                + files.get(0).getFilePath().getFileName() + "_result.txt", false)) {

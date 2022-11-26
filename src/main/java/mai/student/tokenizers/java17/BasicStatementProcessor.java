@@ -98,8 +98,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void run() {
-        process(function.getBody());
         function.tokenized();
+        process(function.getBody());
     }
 
     @Override
@@ -805,6 +805,10 @@ public class BasicStatementProcessor implements StatementProcessor {
         }
         if (type.isUnknownType()) {
             // uses in lambda
+            return;
+        }
+        if (type.isVarType()) {
+            addToken(type.toString());
             return;
         }
 

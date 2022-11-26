@@ -68,13 +68,13 @@ public class VariableOrConst implements IStructure {
         this.realType = realType;
 
         if (realType != null) {
-            if (realType.getName().equals(TYPE_ARRAY)) {
+            if (realType.getName().equals(TYPE_ARRAY) || realType.linkToClass == null) {
                 replacer = null;
             } else {
                 replacer = new ObjectCreationExpr(null, realType.toClassOrInterfaceType(), new NodeList<>());
             }
-        } else {
-            if (type.getName().equals(TYPE_ARRAY)) {
+        } else { // TODO: а нужен ли заменитель вообще для базового класса???
+            if (type.getName().equals(TYPE_ARRAY) || type.linkToClass == null) {
                 replacer = null;
             } else {
                 replacer = new ObjectCreationExpr(null, type.toClassOrInterfaceType(), new NodeList<>());
@@ -127,7 +127,7 @@ public class VariableOrConst implements IStructure {
             } else {
                 replacer = new ObjectCreationExpr(null, realType.toClassOrInterfaceType(), new NodeList<>());
             }
-        } else {
+        } else { // TODO: а нужен ли заменитель вообще для базового класса???
             if (type.getName().equals(TYPE_ARRAY) || type.linkToClass == null) {
                 replacer = null;
             } else {

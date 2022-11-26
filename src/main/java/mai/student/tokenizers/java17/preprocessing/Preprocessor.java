@@ -28,7 +28,9 @@ public class Preprocessor {
         CombinedTypeSolver typeSolver = new CombinedTypeSolver();
         typeSolver.add(new ReflectionTypeSolver());
         // TODO: договориться о принципе получения директории с исходниками
-        typeSolver.add(new JavaParserTypeSolver(file.getFilePath().getParent()));
+        //  тестирование с данной функций обрабатывает все файлы в директории
+        //  (для прогонки по всем работам ведет к проблемам производительности)
+//        typeSolver.add(new JavaParserTypeSolver(file.getFilePath().getParent()));
 
         StaticJavaParser.setConfiguration(new ParserConfiguration().setAttributeComments(false).
                 setSymbolResolver(new JavaSymbolSolver(typeSolver)).
