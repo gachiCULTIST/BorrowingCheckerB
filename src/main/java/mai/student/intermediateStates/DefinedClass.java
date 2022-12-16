@@ -4,23 +4,18 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 // Класс для представления классов сравниваемых прграмм и интерфейсов
 public class DefinedClass implements IStructure {
 
-    private String className;
+    private final String className;
 
-    // Границы для сужения зоны анализа
-    @Deprecated
-    private int startIndex;
-    @Deprecated
-    private int endIndex;
+    public List<DefinedClass> innerClasses;
+    public List<DefinedFunction> functions;
+    public List<VariableOrConst> variablesAndConsts;
 
-    public ArrayList<DefinedClass> innerClasses;
-    public ArrayList<DefinedFunction> functions;
-    public ArrayList<VariableOrConst> variablesAndConsts;
-
-    public ArrayList<Type> inheritanceList;
+    public List<Type> inheritanceList;
     @Deprecated
     public ArrayList<DefinedClass> linksToAncestors;
 
@@ -34,35 +29,14 @@ public class DefinedClass implements IStructure {
     public IStructure parent;
 
     // For Parser
-    public DefinedClass(String className, Type[] params, ArrayList<Type> inheritanceList, IStructure parent) {
+    public DefinedClass(String className, Type[] params, List<Type> inheritanceList, IStructure parent) {
         this.className = className;
-        this.startIndex = -1;
-        this.endIndex = -1;
         this.inheritanceList = inheritanceList != null ? inheritanceList : new ArrayList<>();
         this.parent = parent;
 
         innerClasses = new ArrayList<>();
         functions = new ArrayList<>();
         variablesAndConsts = new ArrayList<>();
-        linksToAncestors = new ArrayList<>();
-
-        if (params != null) {
-            this.params = params;
-            isParametrized = true;
-        }
-    }
-
-    @Deprecated
-    public DefinedClass(String className, int startIndex, int endIndex, Type[] params, IStructure parent) {
-        this.className = className;
-        this.startIndex = startIndex;
-        this.endIndex = endIndex;
-        this.parent = parent;
-
-        innerClasses = new ArrayList<>();
-        functions = new ArrayList<>();
-        variablesAndConsts = new ArrayList<>();
-        inheritanceList = new ArrayList<>();
         linksToAncestors = new ArrayList<>();
 
         if (params != null) {
@@ -87,7 +61,7 @@ public class DefinedClass implements IStructure {
     }
 
     @Override
-    public void actuateTypes(ArrayList<FileRepresentative> files) {
+    public void actuateTypes(List<FileRepresentative> files) {
         if (isLinked) {
             return;
         }
@@ -116,19 +90,9 @@ public class DefinedClass implements IStructure {
         }
         return new Type(className, params);
     }
-    @Deprecated
-    public Type getType(ArrayList<Type> params){return new Type(className);}
 
     public ClassOrInterfaceType getClassOrInterfaceType() {
         return new ClassOrInterfaceType(null, className);
-    }
-
-    public int getStartIndex() {
-        return startIndex;
-    }
-
-    public int getEndIndex() {
-        return endIndex;
     }
 
     public boolean isParametrized() {

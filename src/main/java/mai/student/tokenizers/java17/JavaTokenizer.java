@@ -1,15 +1,22 @@
 package mai.student.tokenizers.java17;
 
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.body.CallableDeclaration;
-import mai.student.UtilityClass;
+import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 import mai.student.intermediateStates.*;
 import mai.student.tokenizers.AbstractTokenizer;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.java17.preprocessing.Preprocessor;
 
-import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.rmi.UnexpectedException;
 import java.time.Clock;
 import java.util.*;
 import java.util.logging.FileHandler;
@@ -19,48 +26,47 @@ import java.util.logging.Logger;
 public class JavaTokenizer extends AbstractTokenizer {
 
     private static final Logger log = Logger.getLogger(JavaTokenizer.class.getName());
-
+    private static final String resourceMissingMessage = "Missing token dictionary: ";
     private static final String DEFAULT_DICTIONARY = "tockenVocabularyJava17.txt";
     private static final ClassLoader cl = JavaTokenizer.class.getClassLoader();
 
-    public JavaTokenizer(ArrayList<Path> files, CodeLanguage lang) throws Exception {
-        super(files, lang);
+    public JavaTokenizer(Path source, CodeLanguage lang) {
+        super(source, lang);
+        configureParser(source);
 
-        if (cl == null) {
-            throw new UnexpectedException("JavaTokenizer: classloader not found?");
+        InputStream resourceToLoad = cl.getResourceAsStream(DEFAULT_DICTIONARY);
+        if (resourceToLoad == null) {
+            log.severe(resourceMissingMessage + DEFAULT_DICTIONARY);
+            throw new RuntimeException(resourceMissingMessage + DEFAULT_DICTIONARY);
         }
 
-        try (Scanner scanner = new Scanner(cl.getResourceAsStream(DEFAULT_DICTIONARY))) {
+        try (Scanner scanner = new Scanner(resourceToLoad)) {
             while (scanner.hasNext()) {
                 int id = scanner.nextInt();
                 tokens.put(scanner.nextLine().strip(), id);
             }
-        } catch (Exception e) {
-            log.log(Level.SEVERE, e.getMessage(), e);
-            throw e;
         }
     }
 
-    public JavaTokenizer(ArrayList<Path> files, CodeLanguage lang, String dictionary) throws Exception {
-        super(files, lang);
+    public JavaTokenizer(Path source, CodeLanguage lang, String dictionary) {
+        super(source, lang);
+        configureParser(source);
 
-        if (cl == null) {
-            throw new UnexpectedException("JavaTokenizer: classloader not found?");
-        }
-
-        try (Scanner scanner = new Scanner(cl.getResourceAsStream(dictionary))) {
+        try (Scanner scanner = new Scanner(new FileReader(dictionary))) {
             while (scanner.hasNext()) {
                 int id = scanner.nextInt();
                 tokens.put(scanner.nextLine().strip(), id);
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.log(Level.SEVERE, e.getMessage(), e);
-            throw e;
+            throw new IllegalArgumentException(resourceMissingMessage + dictionary);
         }
     }
 
     // TODO: tets timer
-    public static long totalTime = 0;
+    public static long totalPreprocessingTime = 0;
+    public static long totalTokenizingTime = 0;
+
 
     // Непосредственно функция будет возвращать массив токенов метода Main сравниваемой программы
     public void tokenize() {
@@ -73,9 +79,10 @@ public class JavaTokenizer extends AbstractTokenizer {
         for (FileRepresentative file : files) {
             long time = timer.millis();
             new Preprocessor(file, methodMatcher).preprocess();
-            totalTime += timer.millis() - time;
+            totalPreprocessingTime += timer.millis() - time;
 //            System.out.println(file.code);
-            UtilityClass.printInsideStructure(file, 0);
+
+//            UtilityClass.printInsideStructure(file, 0);
         }
 
         DefinedFunction mainFunc = findMainFunction();
@@ -85,24 +92,12 @@ public class JavaTokenizer extends AbstractTokenizer {
         }
 
         log.info("Tokenizing started.");
+        long start = timer.millis();
         BasicStatementProcessor processor = new AbstractingStatementProcessor(tokens, mainFunc, files, new TokenizerVisitor(), methodMatcher);
         processor.run();
+        totalTokenizingTime += timer.millis() - start;
         result = mainFunc.tokens;
 
-        // Тест производительности секций
-        System.out.printf("!TEST!:%nParameter processing: %d%n\tLink updating: %d%n\tNode replacing: %d%n" +
-                "Inserting (and processing) method call: %d%n\tMethod types updating: %d%n\t" +
-                        "Method call tokenizing: %d%n\tMethod call tokens adding: %d%n\tMethod matching: %d%n\t" +
-                        "Method JavaParser resolving: %d%n",
-                AbstractingStatementProcessor.test1,
-                ExpressionModifierVisitor.test1,
-                ExpressionModifierVisitor.test2,
-                AbstractingStatementProcessor.test2,
-                AbstractingStatementProcessor.test3,
-                AbstractingStatementProcessor.test4,
-                AbstractingStatementProcessor.test5,
-                AbstractingStatementProcessor.test6,
-                AbstractingStatementProcessor.test7);
 
 //         Запись результатов теста
 //        try (FileWriter saveResult = new FileWriter(files.get(0).getFilePath().getParent() + "/results/"
@@ -127,6 +122,20 @@ public class JavaTokenizer extends AbstractTokenizer {
 //        } catch (Exception ex) {
 //            System.out.println(ex.getMessage());
 //        }
+    }
+
+    // Настройка парсера
+    private void configureParser(Path source) {
+        CombinedTypeSolver typeSolver = new CombinedTypeSolver();
+        typeSolver.add(new ReflectionTypeSolver());
+
+        if (Files.isDirectory(source)) {
+            typeSolver.add(new JavaParserTypeSolver(source));
+        }
+
+
+        StaticJavaParser.setConfiguration(new ParserConfiguration().setAttributeComments(false).
+                setSymbolResolver(new JavaSymbolSolver(typeSolver)));
     }
 
     private DefinedFunction findMainFunction() {

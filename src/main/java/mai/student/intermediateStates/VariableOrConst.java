@@ -3,57 +3,32 @@ package mai.student.intermediateStates;
 import com.github.javaparser.Position;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
 
 // Класс для представления переменных и констант
 public class VariableOrConst implements IStructure {
 
     private static final String TYPE_ARRAY = "Array";
 
-    private Type type;
+    private final Type type;
     private Type realType = null;
+    private final String identifier;
+    public IStructure parent;
 
-    @Deprecated
-    public DefinedClass linkToType = null;
-
-    // TODO: check usage after tokenizer release
-    public HashMap<Type, Type> params = new HashMap<>();
-    private String identifier;
-
-    // TODO: Пусть пока будет, a potom posmotrim (posle realizacii tokenizacii)
-    public IStructure parent = null;
-
-    // Начало для определения зоны действия
-    @Deprecated
-    private int startIndex;
 
     // For Parser
-    private Position position;
-
+    private final Position position;
     private boolean isLinked = false;
-
     private ObjectCreationExpr replacer = null;
 
     public VariableOrConst(Type type, String identifier, IStructure parent, Position position) {
         this.type = type;
         this.identifier = identifier;
-        this.startIndex = -1;
         this.parent = parent;
 
-        if (position == null) {
-            this.position = new Position(-1, -1);
-        } else {
-            this.position = position;
-        }
-    }
-
-    public VariableOrConst(Type type, String identifier, int startIndex) {
-        this.type = type;
-        this.identifier = identifier;
-        this.startIndex = startIndex;
+        this.position = Objects.requireNonNullElseGet(position, () -> new Position(-1, -1));
     }
 
     public Type getType() {
@@ -102,7 +77,7 @@ public class VariableOrConst implements IStructure {
     }
 
     @Override
-    public void actuateTypes(ArrayList<FileRepresentative> files) {
+    public void actuateTypes(List<FileRepresentative> files) {
         if (isLinked) {
             return;
         }
@@ -114,10 +89,6 @@ public class VariableOrConst implements IStructure {
         if (realType != null) {
             realType.updateLink(parent, files);
         }
-        params.forEach((key, value) -> {
-            key.updateLink(parent, files);
-            value.updateLink(parent, files);
-        });
         parent.actuateTypes(files);
 
         // Создание заменителя в выражении
@@ -145,8 +116,4 @@ public class VariableOrConst implements IStructure {
         return this.position;
     }
 
-    @Deprecated
-    public int getStartIndex() {
-        return startIndex;
-    }
 }

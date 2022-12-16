@@ -3,109 +3,44 @@ package mai.student;
 import mai.student.intermediateStates.*;
 import mai.student.tokenizers.CodeLanguage;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class UtilityClass {
 
-    public static CodeLanguage getLanguage(String file) {
-        String extension = file.substring(file.lastIndexOf('.') + 1);
+    private static final String cExtension = ".c";
+    private static final String cppExtension = ".cpp";
+    private static final String javaExtension = ".java";
+    private static final String pythonExtension = ".py";
 
-        switch (extension) {
-            case "java":
+    public static CodeLanguage getLanguage(Path source) {
+        if (Files.isDirectory(source)) {
+            try (Stream<Path> insides = Files.list(source)) {
+                for (Path path : insides.collect(Collectors.toList())) {
+                    return getLanguage(path);
+                }
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Wrong source path: " + source, e);
+            }
+        } else {
+            if (source.toString().endsWith(javaExtension)) {
                 return CodeLanguage.Java;
-            case "c":
-            case "cpp":
+            }
+
+            if (source.toString().endsWith(cExtension) || source.toString().endsWith(cppExtension)) {
                 return CodeLanguage.C;
-            case "py":
+            }
+
+            if (source.toString().endsWith(pythonExtension)) {
                 return CodeLanguage.Python;
-        }
-
-        throw new UnsupportedOperationException("Not supported file type: " + extension);
-    }
-
-    // Поиск индекса закрывающей скобки (вид которой устанавливается в соответствующем поле)
-    public static int findLastFigure(StringBuilder code, int start, String openChar, String closeChar) {
-        int end = start - 1;
-        int openedFig = 1;
-        do {
-            end = code.indexOf(closeChar, end + 1);
-            while (end != -1 && end > 0 && code.charAt(end - 1) == '\'' && end < code.length() - 1 &&
-                    code.charAt(end + 1) == '\'') {
-                end = code.indexOf(closeChar, end + 1);
             }
-            if (end == -1) {
-                throw new RuntimeException("Can't find closing char: " + closeChar);
-            }
-
-            while (true) {
-                start = code.indexOf(openChar, start + 1);
-                while (start != -1 && start > 0 && code.charAt(start - 1) == '\'' && start < code.length() - 1 &&
-                        code.charAt(start + 1) == '\'') {
-                    start = code.indexOf(openChar, start + 1);
-                }
-                if (start >= end || start == -1) {
-                    break;
-                }
-                ++openedFig;
-            }
-
-            start = end;
-            --openedFig;
-        } while (openedFig != 0);
-        return end;
-    }
-
-    // Функция для представления строки в виде массива из значений указанной группы указанного регулярного выражения
-    public static ArrayList<String> stringToList(String str, String regex, int groupNum) {
-        ArrayList<String> result = new ArrayList<>();
-
-        if (str == null) {
-            return result;
         }
 
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(str);
-
-        while (matcher.find()) {
-            result.add(matcher.group(groupNum));
-        }
-        return result;
-    }
-
-    public static ArrayList<Integer> countSquareBrackets(String str, String regex, int[] bracketGroups) {
-        ArrayList<Integer> result = new ArrayList<>();
-
-        if (str == null) {
-            return result;
-        }
-
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(str);
-
-        while (matcher.find()) {
-            int counter = 0;
-
-            for (int brackets : bracketGroups) {
-                if (matcher.group(brackets) == null) {
-                    continue;
-                }
-                String bracketGroup = matcher.group(brackets);
-
-                int pointer = -1;
-                while (pointer < bracketGroup.length()) {
-                    pointer = bracketGroup.indexOf('[', pointer + 1);
-                    if (pointer == -1) {
-                        break;
-                    }
-                    ++counter;
-                }
-            }
-
-            result.add(counter);
-        }
-        return result;
+        throw new UnsupportedOperationException("Not supported file type: " + source);
     }
 
     // Функция для проверка анализа программы

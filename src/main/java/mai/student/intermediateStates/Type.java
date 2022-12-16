@@ -5,21 +5,11 @@ import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 public class Type {
 
-    // analyzed type objects for general link init
-    private static final List<Type> typesToUpdate = new ArrayList<>();
-
-    private static final String TYPE_BYTE = "byte";
-    private static final String TYPE_DOUBLE = "double";
-    private static final String TYPE_FLOAT = "float";
-    private static final String TYPE_INTEGER = "int";
-    private static final String TYPE_CHAR = "char";
-    private static final String TYPE_SHORT = "short";
-    private static final String TYPE_LONG = "long";
     // For Parser (temp maybe)
     private static final String TYPE_VOID = "void";
     private static final String TYPE_UNDEFINED = "null";
@@ -27,19 +17,9 @@ public class Type {
     private static final String TYPE_VAR = "var";
     private static final String TYPE_OBJECT = "Object";
 
-    private static final Type[] byteAutoCast = {new Type(TYPE_SHORT), new Type(TYPE_CHAR), new Type(TYPE_INTEGER),
-            new Type(TYPE_LONG), new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
-    private static final Type[] shortAutoCast = {new Type(TYPE_CHAR), new Type(TYPE_INTEGER),
-            new Type(TYPE_LONG), new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
-    private static final Type[] charAutoCast = {new Type(TYPE_SHORT), new Type(TYPE_INTEGER),
-            new Type(TYPE_LONG), new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
-    private static final Type[] integerAutoCast = {new Type(TYPE_LONG), new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
-    private static final Type[] longAutoCast = {new Type(TYPE_FLOAT), new Type(TYPE_DOUBLE)};
-    private static final Type[] floatAutoCast = {new Type(TYPE_DOUBLE)};
-
     // TODO: подумать про добавление кволифаера (пакет)
-    private String name;
-    private ArrayList<Type> params;
+    private final String name;
+    private final List<Type> params;
 
     private boolean isLinkSet = false;
     DefinedClass linkToClass = null;
@@ -58,11 +38,7 @@ public class Type {
     public Type(String name, ArrayList<Type> params) {
         this.name = name;
 
-        if (params != null) {
-            this.params = params;
-        } else {
-            this.params = new ArrayList<>();
-        }
+        this.params = Objects.requireNonNullElseGet(params, ArrayList::new);
     }
 
     // TODO: check usage (is link always not null)
@@ -70,11 +46,7 @@ public class Type {
         this.name = name;
         this.linkToClass = link;
 
-        if (params != null) {
-            this.params = params;
-        } else {
-            this.params = new ArrayList<>();
-        }
+        this.params = Objects.requireNonNullElseGet(params, ArrayList::new);
     }
 
     public Type(String name, ArrayList<Type> params, DefinedClass link, boolean isLinkSet) {
@@ -82,18 +54,14 @@ public class Type {
         this.linkToClass = link;
         this.isLinkSet = isLinkSet;
 
-        if (params != null) {
-            this.params = params;
-        } else {
-            this.params = new ArrayList<>();
-        }
+        this.params = Objects.requireNonNullElseGet(params, ArrayList::new);
     }
 
     public String getName() {
         return name;
     }
 
-    public ArrayList<Type> getParams() {
+    public List<Type> getParams() {
         return params;
     }
 
@@ -127,49 +95,6 @@ public class Type {
             }
 
             return true;
-        }
-
-        return false;
-    }
-
-    public boolean equalsWithCompatibility(Type t2, ArrayList<FileRepresentative> files) {
-        if (t2 != null && this.params.isEmpty() && !t2.params.isEmpty() && this.name.equals(t2.name)) {
-            return true;
-        }
-
-        if (t2 != null && t2.params.size() == this.params.size()) {
-            boolean autoCast = false;
-            switch (t2.getName()) {
-                case TYPE_BYTE:
-                    autoCast = isAutoCast(this, byteAutoCast);
-                    break;
-                case TYPE_SHORT:
-                    autoCast = isAutoCast(this, shortAutoCast);
-                    break;
-                case TYPE_CHAR:
-                    autoCast = isAutoCast(this, charAutoCast);
-                    break;
-                case TYPE_INTEGER:
-                    autoCast = isAutoCast(this, integerAutoCast);
-                    break;
-                case TYPE_FLOAT:
-                    autoCast = isAutoCast(this, floatAutoCast);
-                    break;
-                case TYPE_LONG:
-                    autoCast = isAutoCast(this, longAutoCast);
-                    break;
-            }
-
-            if (t2.name.equals(this.name) || autoCast || IStructure.findEntity(files, t2.linkToClass, this.name,
-                    true, null) != null) {
-                for (int i = 0; i < t2.params.size(); ++i) {
-                    if (!t2.params.get(i).equalsWithCompatibility(this.params.get(i), files)) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
         }
 
         return false;
@@ -226,7 +151,7 @@ public class Type {
         return new ClassOrInterfaceType(null, new SimpleName(name), typeArgs);
     }
 
-    public void updateLink(IStructure scope, ArrayList<FileRepresentative> files) {
+    public void updateLink(IStructure scope, List<FileRepresentative> files) {
         this.isLinkSet = true;
 
         IStructure link = IStructure.findEntity(files, scope, this.name, false, null);
@@ -242,26 +167,6 @@ public class Type {
         for (Type p : this.params) {
             p.updateLink(scope, files);
         }
-    }
-
-    // TODO: check correction after changing params type from String[] to Type[] in classes and funcs
-    public static Type getTypeWithMapping(Type origin, HashMap<String, Type> params) {
-        Type result = origin.clone();
-        result.getParams().clear();
-
-        if (params.containsKey(origin.getName())) {
-            return getTypeWithMapping(params.get(origin.getName()), params);
-        }
-
-        for (int i = 0; i < origin.getParams().size(); ++i) {
-            if (params.containsKey(origin.getParams().get(i).getName())) {
-                result.getParams().add(getTypeWithMapping(params.get(origin.getParams().get(i).getName()), params));
-            } else {
-                result.getParams().add(origin.getParams().get(i).clone());
-            }
-        }
-
-        return result;
     }
 
     // For Parser

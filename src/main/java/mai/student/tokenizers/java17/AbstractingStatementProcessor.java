@@ -14,24 +14,12 @@ import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.utils.Pair;
 import mai.student.intermediateStates.*;
 
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-// TODO: release
 public class AbstractingStatementProcessor extends BasicStatementProcessor {
-
-    // TODO: test
-    public static Clock clock = Clock.systemDefaultZone();
-    public static long test1 = 0;
-    public static long test2 = 0;
-    public static long test3 = 0;
-    public static long test4 = 0;
-    public static long test5 = 0;
-    public static long test6 = 0;
-    public static long test7 = 0;
 
     protected static String IDENTIFIER = "*ident*";
 
@@ -68,15 +56,40 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         // resolve value
         assignExpr.getValue().accept(visitor, this);
 
-        if (!skip) {
-            assignExpr.getValue().accept(new ExpressionModifierVisitor(files, function), null);
-            mai.student.intermediateStates.Type newType = resolvedTypeToMyType(assignExpr.getValue().calculateResolvedType());
-            if (newType == null) {
-                return;
+        try {
+            if (!skip) {
+                assignExpr.getValue().accept(new ExpressionModifierVisitor(files, function), null);
+                mai.student.intermediateStates.Type newType = resolvedTypeToMyType(assignExpr.getValue().calculateResolvedType());
+                if (newType == null) {
+                    return;
+                }
+
+                newType.updateLink(function, files);
+                variable.setRealType(newType);
+            }
+        } catch (UnsolvedSymbolException e) {
+            if (e.getCause() == null) {
+                // Откуда-то появились сторонние классы
+                if (IStructure.findEntity(files, function, e.getName(), false, null) == null) {
+                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
+                }
+            } else {
+                if (e.getCause() instanceof UnsolvedSymbolException &&
+                        IStructure.findEntity(files, function, ((UnsolvedSymbolException) e.getCause()).getName(),
+                                false, null) == null) {
+                    throw new MissingTypeException("Missing type in source code: " +
+                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
+                }
             }
 
-            newType.updateLink(function, (ArrayList<FileRepresentative>) files);
-            variable.setRealType(newType);
+            throw e;
+        } catch (RuntimeException e) {
+            if (checkMissingTypeInRuntimeException(e)) {
+                throw new MissingTypeException("Missing type in source code: " +
+                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
+            }
+
+            throw e;
         }
     }
 
@@ -92,8 +105,6 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         addToken(NEW);
         addTypeAsTokens(objectCreationExpr.getType());
 
-        // TODO: delete test
-        long start = clock.millis();
         // params processing
         addToken(LEFT_PAREN);
         boolean isNotFirst = false;
@@ -108,56 +119,47 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
             arg.accept(new ExpressionModifierVisitor(files, function), null);
         }
         addToken(RIGHT_PAREN);
-        test1 += clock.millis() - start;
 
-        // TODO: delete test
-        start = clock.millis();
         // method resolving
         try {
             objectCreationExpr.resolve().toAst().ifPresent(method -> {
-                long innerStart = clock.millis();
                 if (methodMatcher.containsKey(method) && methodMatcher.get(method) != function) {
                     DefinedFunction matchedFunc = methodMatcher.get(method);
-                    test6 += clock.millis() - innerStart;
 
-                    // TODO: rework type casting
-                    innerStart = clock.millis();
-                    matchedFunc.actuateTypes((ArrayList<FileRepresentative>) files);
-                    test3 += clock.millis() - innerStart;
+                    matchedFunc.actuateTypes(files);
 
-                    innerStart = clock.millis();
                     if (!matchedFunc.isTokenized()) {
                         AbstractingStatementProcessor processor = new AbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
                         processor.run();
                     }
-                    test4 += clock.millis() - innerStart;
 
-                    innerStart = clock.millis();
                     function.addFunctionTokens(matchedFunc);
-                    test5 += clock.millis() - innerStart;
                 }
             });
         } catch (UnsolvedSymbolException e) {
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
-                if (IStructure.findEntity(files, function, e.getName(), false, null) != null) {
-                    throw e;
+                if (IStructure.findEntity(files, function, e.getName(), false, null) == null) {
+                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
                 }
             } else {
                 if (e.getCause() instanceof UnsolvedSymbolException &&
                         IStructure.findEntity(files, function, ((UnsolvedSymbolException) e.getCause()).getName(),
-                                false, null) != null) {
-                    throw e;
+                                false, null) == null) {
+                    throw new MissingTypeException("Missing type in source code: " +
+                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
                 }
             }
+
+            throw e;
         } catch (RuntimeException e) {
-            if (!checkRuntimeException(e)) {
-                throw e;
+            if (checkMissingTypeInRuntimeException(e)) {
+                throw new MissingTypeException("Missing type in source code: " +
+                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
             }
 
-            // TODO: rework - for multifile programs throw this expression wrapped by new custom class
+            throw e;
         }
-        test2 += clock.millis() - start;
     }
 
     @Override
@@ -179,8 +181,6 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         // id
         addToken(methodCallExpr.getName().asString());
 
-        // TODO: delete test
-        long start = clock.millis();
         // params processing
         addToken(LEFT_PAREN);
         boolean isNotFirst = false;
@@ -195,70 +195,50 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
             arg.accept(new ExpressionModifierVisitor(files, function), null);
         }
         addToken(RIGHT_PAREN);
-        test1 += clock.millis() - start;
 
-
-        // TODO: delete
-        System.out.println(methodCallExpr);
-
-
-        // TODO: delete test
-        start = clock.millis();
-            // method resolving
+        // method resolving
         try {
             methodCallExpr.resolve().toAst().ifPresent(method -> {
-                long innerStart = clock.millis();
                 if (methodMatcher.containsKey(method) && methodMatcher.get(method) != function) {
                     DefinedFunction matchedFunc = methodMatcher.get(method);
-                    test6 += clock.millis() - innerStart;
 
-                    // TODO: rework type casting
-                    innerStart = clock.millis();
-                    matchedFunc.actuateTypes((ArrayList<FileRepresentative>) files);
-                    test3 += clock.millis() - innerStart;
+                    matchedFunc.actuateTypes(files);
 
-                    innerStart = clock.millis();
                     if (!matchedFunc.isTokenized()) {
                         AbstractingStatementProcessor processor = new AbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
                         processor.run();
                     }
-                    test4 += clock.millis() - innerStart;
 
-                    innerStart = clock.millis();
                     function.addFunctionTokens(matchedFunc);
-                    test5 += clock.millis() - innerStart;
                 }
             });
         } catch (UnsolvedSymbolException e) {
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
-                if (IStructure.findEntity(files, function, e.getName(), false, null) != null) {
-                    throw e;
+                if (IStructure.findEntity(files, function, e.getName(), false, null) == null) {
+                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
                 }
             } else {
                 if (e.getCause() instanceof UnsolvedSymbolException &&
                         IStructure.findEntity(files, function, ((UnsolvedSymbolException) e.getCause()).getName(),
-                                false, null) != null) {
-                    throw e;
+                                false, null) == null) {
+                    throw new MissingTypeException("Missing type in source code: " +
+                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
                 }
             }
+
+            throw e;
         } catch (RuntimeException e) {
-//            System.out.println(e.getCause() == null || e.getCause().getCause() == null || e.getCause().getCause().getCause() == null || e.getCause().getCause().getCause() instanceof UnsolvedSymbolException);
-//            System.out.println(((UnsolvedSymbolException) e.getCause().getCause().getCause()).getName());
-            if (!checkRuntimeException(e)) {
-                throw e;
+            if (checkMissingTypeInRuntimeException(e)) {
+                throw new MissingTypeException("Missing type in source code: " +
+                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
             }
 
-            // TODO: rework - for multifile programs throw this expression wrapped by new custom class
+            throw e;
         }
-        test2 += clock.millis() - start;
-
-//        start = clock.millis();
-//        methodCallExpr.resolve().toAst();
-//        test7 += clock.millis() - start;
     }
 
-    private boolean checkRuntimeException(Throwable e) {
+    private boolean checkMissingTypeInRuntimeException(Throwable e) {
         if (e == null) {
             return false;
         }
@@ -266,9 +246,21 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         if (e instanceof UnsolvedSymbolException) {
             UnsolvedSymbolException use = (UnsolvedSymbolException) e;
 
-            return IStructure.findEntity(files, function, use.getName(),false, null) == null;
+            return IStructure.findEntity(files, function, use.getName(), false, null) == null;
         } else {
-            return checkRuntimeException(e.getCause());
+            return checkMissingTypeInRuntimeException(e.getCause());
+        }
+    }
+
+    private String getNameOfInnerUnsolvedSymbolException(Throwable e) {
+        if (e == null) {
+            return null;
+        }
+
+        if (e instanceof UnsolvedSymbolException) {
+            return ((UnsolvedSymbolException) e).getName();
+        } else {
+            return getNameOfInnerUnsolvedSymbolException(e.getCause());
         }
     }
 

@@ -5,33 +5,21 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 // Класс для представления функций
 public class DefinedFunction implements IStructure {
 
-    private static final String TYPE_UNDEFINED = "null";
-
-    private String funcName;
-    private Type[] argTypes;
-
-    // Границы для сужения зоны анализа
-    @Deprecated
-    private int startIndex;
-    @Deprecated
-    private int blockStart;
-    @Deprecated
-    private int endIndex;
+    private final String funcName;
+    private final Type[] argTypes;
 
     // Параметризирование
     private boolean isParametrized = false;
     private Type[] params;
-    private Type returnValue;
+    private final Type returnValue;
 
-    public ArrayList<DefinedClass> innerClasses;
-    public ArrayList<VariableOrConst> variablesAndConsts;
-
-    @Deprecated
-    private boolean isRecurrent = false;
+    public List<DefinedClass> innerClasses;
+    public List<VariableOrConst> variablesAndConsts;
 
     public DefinedClass parent;
 
@@ -40,21 +28,18 @@ public class DefinedFunction implements IStructure {
 
     private boolean isLinked = false;
 
-    public ArrayList<Integer> tokens;
+    public List<Integer> tokens;
 
     // For Parser
     private BlockStmt body = null;
 
-    private CallableDeclaration<?> declaration = null;
+    private final CallableDeclaration<?> declaration;
 
     // For Parser
     public DefinedFunction(String funcName, Type[] argTypes, Type[] params, Type returnValue, DefinedClass parent,
                            BlockStmt body, CallableDeclaration<?> declaration) {
         this.funcName = funcName;
         this.argTypes = argTypes;
-        this.startIndex = -1;
-        this.blockStart = -1;
-        this.endIndex = -1;
         this.returnValue = returnValue;
         this.parent = parent;
 
@@ -74,28 +59,6 @@ public class DefinedFunction implements IStructure {
         }
 
         this.declaration = declaration;
-    }
-
-    @Deprecated
-    public DefinedFunction(String funcName, Type[] argTypes, int startIndex, int blockStart, int endIndex, Type[] params,
-                           Type returnValue, boolean isRecurrent, DefinedClass parent) {
-        this.funcName = funcName;
-        this.argTypes = argTypes;
-        this.startIndex = startIndex;
-        this.blockStart = blockStart;
-        this.endIndex = endIndex;
-        this.returnValue = returnValue;
-        this.isRecurrent = isRecurrent;
-        this.parent = parent;
-
-        innerClasses = new ArrayList<>();
-        variablesAndConsts = new ArrayList<>();
-        tokens = new ArrayList<>();
-
-        if (params != null) {
-            this.params = params;
-            isParametrized = true;
-        }
     }
 
     @Override
@@ -138,7 +101,7 @@ public class DefinedFunction implements IStructure {
     }
 
     @Override
-    public void actuateTypes(ArrayList<FileRepresentative> files) {
+    public void actuateTypes(List<FileRepresentative> files) {
         if (isLinked) {
             return;
         }
@@ -162,21 +125,6 @@ public class DefinedFunction implements IStructure {
         return argTypes;
     }
 
-    @Deprecated
-    public int getStartIndex() {
-        return startIndex;
-    }
-
-    @Deprecated
-    public int getBlockStart() {
-        return blockStart;
-    }
-
-    @Deprecated
-    public int getEndIndex() {
-        return endIndex;
-    }
-
     public boolean isParametrized() {
         return isParametrized;
     }
@@ -189,61 +137,4 @@ public class DefinedFunction implements IStructure {
         return returnValue;
     }
 
-    @Deprecated
-    public boolean isRecurrent() {
-        return isRecurrent;
-    }
-
-    public TypeCompatibility checkCompatibility(ArrayList<Type> args, ArrayList<FileRepresentative> files,
-                                                IStructure searchOrigin) {
-        boolean exactMatch = true;
-
-        if (args.size() != this.argTypes.length) {
-            return TypeCompatibility.NonCompatible;
-        }
-
-        for (int i = 0; i < this.argTypes.length; ++i) {
-            if (args.get(i).getName().equals(TYPE_UNDEFINED)) {
-                continue;
-            }
-            if (!this.argTypes[i].equals(args.get(i))) {
-                exactMatch = false;
-                break;
-            }
-        }
-
-        for (int i = 0; i < this.argTypes.length; ++i) {
-            if (args.get(i).getName().equals(TYPE_UNDEFINED)) {
-                continue;
-            }
-            args.get(i).updateLink(searchOrigin, files);
-            this.argTypes[i].updateLink(searchOrigin, files);
-            if (!this.argTypes[i].equalsWithCompatibility(args.get(i), files)) {
-                return TypeCompatibility.NonCompatible;
-            }
-        }
-
-        return exactMatch ? TypeCompatibility.ExactMatch : TypeCompatibility.Compatible;
-    }
-
-    public static DefinedFunction getFunction(ArrayList<FileRepresentative> files, IStructure searchOrigin,
-                                              String func_name, ArrayList<Type> args, ArrayList<Type> params) {
-        ArrayList<DefinedFunction> allFuncs = IStructure.findAllFunctions(files, searchOrigin, func_name,
-                false, null);
-        DefinedFunction compatibleFunc = null;
-        for (DefinedFunction func : allFuncs) {
-            TypeCompatibility compatibility = func.checkCompatibility(args, files, searchOrigin);
-            if (compatibility == TypeCompatibility.ExactMatch) {
-                return func;
-            } else if (compatibleFunc == null && compatibility == TypeCompatibility.Compatible) {
-                compatibleFunc = func;
-            }
-        }
-
-        if (!allFuncs.isEmpty() && compatibleFunc == null) {
-            compatibleFunc = allFuncs.get(0);
-        }
-
-        return compatibleFunc;
-    }
 }

@@ -1,21 +1,13 @@
-package mai.student;
+package ru.mai;
 
 import com.github.javaparser.ParseProblemException;
-import mai.student.intermediateStates.DefinedFunction;
-import mai.student.intermediateStates.IStructure;
-import mai.student.tokenizers.java17.ExpressionTypeSolver;
+import mai.student.CodeComparer;
 import mai.student.tokenizers.java17.JavaTokenizer;
+import mai.student.tokenizers.java17.MissingTypeException;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class StatAnalyserExampleMain {
 
@@ -160,17 +152,15 @@ public class StatAnalyserExampleMain {
                         continue;
                     }
 
-                    ArrayList<Path> paths1 = new ArrayList<>();
-                    paths1.add(f1.toPath());
-
-                    ArrayList<Path> paths2 = new ArrayList<>();
-                    paths2.add(f2.toPath());
-
                     System.out.println(name1 + name2 + "\n" + assignment1);
                     try {
-                        CodeComparer codeComparer = new CodeComparer(paths1, paths2);
-                        System.out.println("!!!! TIME: " + JavaTokenizer.totalTime);
-//                        codeComparer.compare();
+                        CodeComparer codeComparer = new CodeComparer();
+                        codeComparer.setFirstProgram(f1.toPath());
+                        codeComparer.setSecondProgram(f2.toPath());
+                        System.out.println("!!!! TIME\n\tPreprocessing: " + JavaTokenizer.totalPreprocessingTime +
+                                "\n\tTokenizing: " + JavaTokenizer.totalTokenizingTime);
+                        codeComparer.compare();
+                        System.out.println(codeComparer.getResult());
 //                        System.out.println(codeComparer.isCheckPassed());
 
 
@@ -180,7 +170,7 @@ public class StatAnalyserExampleMain {
                     } catch (Exception e) {
                         if (e instanceof ParseProblemException) {
                             parseProblemCounter += 1;
-                        } else {
+                        } else if (!(e instanceof MissingTypeException)) {
                             System.out.println(e.getMessage());
                             throw new RuntimeException(e);
                         }
