@@ -24,6 +24,7 @@ public abstract class AbstractTokenizer {
         this.files = new ArrayList<>();
 
         if (Files.isDirectory(source)) {
+            System.out.println(source);
             for (Path path : collectFiles(source)) {
                 FileRepresentative file = new FileRepresentative(path);
                 this.files.add(file);
@@ -42,7 +43,7 @@ public abstract class AbstractTokenizer {
                         if (Files.isDirectory(path)) {
                             paths.addAll(collectFiles(path));
                         } else {
-                            if (path.endsWith(language.getExtension())) {
+                            if (path.toString().endsWith(language.getExtension())) {
                                 paths.add(path);
                             }
                         }

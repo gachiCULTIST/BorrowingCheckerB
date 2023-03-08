@@ -68,9 +68,9 @@ public class BasicStatementProcessor implements StatementProcessor {
     protected static final String UNION = "|";
     protected static final String INTERSECTION = "&";
 
-    protected static final int START_INDEX = 1000;
+    protected final int TOKEN_SPAN = 1000;
 
-    protected static int indexForNextElement = START_INDEX;
+    protected int indexForNextElement;
 
     protected final Map<String, Integer> tokenDictionary;
 
@@ -91,6 +91,8 @@ public class BasicStatementProcessor implements StatementProcessor {
         }
 
         this.tokenDictionary = tokenDictionary;
+        this.indexForNextElement = tokenDictionary.size() + TOKEN_SPAN;
+
         this.function = function;
         this.files = files;
         this.visitor = visitor;

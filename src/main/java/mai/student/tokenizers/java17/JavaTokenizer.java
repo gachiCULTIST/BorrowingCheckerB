@@ -13,6 +13,7 @@ import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.java17.preprocessing.Preprocessor;
 
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -77,6 +78,7 @@ public class JavaTokenizer extends AbstractTokenizer {
 
         Map<CallableDeclaration<?>, DefinedFunction> methodMatcher = new HashMap<>();
         for (FileRepresentative file : files) {
+            System.out.println("File: " + file.getFilePath().toString());
             long time = timer.millis();
             new Preprocessor(file, methodMatcher).preprocess();
             totalPreprocessingTime += timer.millis() - time;

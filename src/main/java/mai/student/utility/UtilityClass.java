@@ -1,4 +1,4 @@
-package mai.student;
+package mai.student.utility;
 
 import mai.student.intermediateStates.*;
 import mai.student.tokenizers.CodeLanguage;
@@ -50,7 +50,7 @@ public class UtilityClass {
 
             System.out.println(file.curPackage);
             System.out.println("Imports:");
-            for (String importEntity : file.imports) {
+            for (Import importEntity : file.imports) {
                 System.out.println(importEntity);
             }
 

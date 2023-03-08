@@ -2,6 +2,7 @@ package mai.student.tokenizers.java17;
 
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.CallableDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -13,11 +14,10 @@ import com.github.javaparser.resolution.types.ResolvedReferenceType;
 import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.utils.Pair;
 import mai.student.intermediateStates.*;
+import mai.student.utility.EntitySearchers;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class AbstractingStatementProcessor extends BasicStatementProcessor {
 
@@ -37,15 +37,14 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         boolean skip = true;
         VariableOrConst variable = null;
 
-        // resolve var
+        // resolve local var
         assignExpr.getTarget().accept(visitor, this);
         if (assignExpr.getTarget().isNameExpr()) {
-            IStructure search = IStructure.findEntity(files, function,
-                    assignExpr.getTarget().asNameExpr().getNameAsString(), false, null);
+            VariableOrConst var = EntitySearchers.findVariable(files, function,
+                    assignExpr.getTarget().asNameExpr().getNameAsString(), false);
 
-            if (search.getStrucType() == StructureType.Variable &&
-                    ((VariableOrConst) search).parent.getStrucType() == StructureType.Function) {
-                variable = (VariableOrConst) search;
+            if (var.getParent().getStrucType() == StructureType.Function) {
+                variable = var;
                 skip = false;
             }
         }
@@ -70,13 +69,13 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         } catch (UnsolvedSymbolException e) {
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
-                if (IStructure.findEntity(files, function, e.getName(), false, null) == null) {
+                if (EntitySearchers.findClass(files, function, e.getName()) == null) {
                     throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
                 }
             } else {
                 if (e.getCause() instanceof UnsolvedSymbolException &&
-                        IStructure.findEntity(files, function, ((UnsolvedSymbolException) e.getCause()).getName(),
-                                false, null) == null) {
+                        EntitySearchers.findClass(files, function,
+                                ((UnsolvedSymbolException) e.getCause()).getName()) == null) {
                     throw new MissingTypeException("Missing type in source code: " +
                             ((UnsolvedSymbolException) e.getCause()).getName(), e);
                 }
@@ -90,6 +89,81 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
             }
 
             throw e;
+        }
+    }
+
+    // every var in the list are represented as "type id = Expr",
+    // cause there can be construction "int[] ar1, ar2[];"
+    // PS: shortly - "int[] ar1, ar2[];" -> "int[] ar1; int[][] ar2;"
+    @Override
+    public void process(VariableDeclarationExpr variableDeclarationExpr) {
+
+        // var list
+        boolean isNotFirst = false;
+        for (VariableDeclarator var : variableDeclarationExpr.getVariables()) {
+            if (isNotFirst) {
+                addToken(SEMICOLON);
+            } else {
+                isNotFirst = true;
+            }
+
+            // modifiers
+            //  PS: parser returns modifier with whitespace
+            variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString().strip()));
+
+            // Type + id
+            addTypeAsTokens(var.getType());
+            addToken(var.getNameAsString());
+
+            // Find variable in structure
+            VariableOrConst variable = EntitySearchers.findVariable(files, function,
+                    var.getNameAsString(), false);
+
+
+            // initializer
+            var.getInitializer().ifPresent(init -> {
+                addToken(ASSIGN);
+                init.accept(visitor, this);
+
+                if (init.isArrayInitializerExpr()) {
+                    return;
+                }
+
+                try {
+                    init.accept(new ExpressionModifierVisitor(files, function), null);
+
+                    mai.student.intermediateStates.Type newType = resolvedTypeToMyType(init.calculateResolvedType());
+                    if (newType == null) {
+                        return;
+                    }
+
+                    newType.updateLink(function, files);
+                    variable.setRealType(newType);
+                } catch (UnsolvedSymbolException e) {
+                    if (e.getCause() == null) {
+                        // Откуда-то появились сторонние классы
+                        if (EntitySearchers.findClass(files, function, e.getName()) == null) {
+                            throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
+                        }
+                    } else {
+                        if (e.getCause() instanceof UnsolvedSymbolException &&
+                                EntitySearchers.findClass(files, function,
+                                        ((UnsolvedSymbolException) e.getCause()).getName()) == null) {
+                            throw new MissingTypeException("Missing type in source code: " +
+                                    ((UnsolvedSymbolException) e.getCause()).getName(), e);
+                        }
+                    }
+
+                    throw e;
+                } catch (RuntimeException e) {
+                    if (checkMissingTypeInRuntimeException(e)) {
+                        throw new MissingTypeException("Missing type in source code: " +
+                                getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
+                    }
+
+                    throw e;
+                }
+            });
         }
     }
 
@@ -139,23 +213,27 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         } catch (UnsolvedSymbolException e) {
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
-                if (IStructure.findEntity(files, function, e.getName(), false, null) == null) {
-                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
+                if (EntitySearchers.findClass(files, function, e.getName()) == null) {
+                    //TODO: uncomment
+//                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
                 }
             } else {
                 if (e.getCause() instanceof UnsolvedSymbolException &&
-                        IStructure.findEntity(files, function, ((UnsolvedSymbolException) e.getCause()).getName(),
-                                false, null) == null) {
-                    throw new MissingTypeException("Missing type in source code: " +
-                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
+                        EntitySearchers.findClass(files, function,
+                                ((UnsolvedSymbolException) e.getCause()).getName()) == null) {
+
+                    //TODO: uncomment
+//                    throw new MissingTypeException("Missing type in source code: " +
+//                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
                 }
             }
 
-            throw e;
+//            throw e;
         } catch (RuntimeException e) {
             if (checkMissingTypeInRuntimeException(e)) {
-                throw new MissingTypeException("Missing type in source code: " +
-                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
+                //TODO: uncomment
+//                throw new MissingTypeException("Missing type in source code: " +
+//                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
             }
 
             throw e;
@@ -166,9 +244,11 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
     public void process(MethodCallExpr methodCallExpr) {
         // scope
         methodCallExpr.getScope().ifPresent(scope -> {
-            addToken(IDENTIFIER);
+            scope.accept(visitor, this);
+            scope.accept(new ExpressionModifierVisitor(files, function), null);
             addToken(DOT);
         });
+
 
         // generic types
         Optional<NodeList<Type>> typeArguments = methodCallExpr.getTypeArguments();
@@ -215,13 +295,12 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         } catch (UnsolvedSymbolException e) {
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
-                if (IStructure.findEntity(files, function, e.getName(), false, null) == null) {
+                if (EntitySearchers.findClass(files, function, e.getName()) == null) {
                     throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
                 }
             } else {
                 if (e.getCause() instanceof UnsolvedSymbolException &&
-                        IStructure.findEntity(files, function, ((UnsolvedSymbolException) e.getCause()).getName(),
-                                false, null) == null) {
+                        EntitySearchers.findClass(files, function, ((UnsolvedSymbolException) e.getCause()).getName()) == null) {
                     throw new MissingTypeException("Missing type in source code: " +
                             ((UnsolvedSymbolException) e.getCause()).getName(), e);
                 }
@@ -246,7 +325,7 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         if (e instanceof UnsolvedSymbolException) {
             UnsolvedSymbolException use = (UnsolvedSymbolException) e;
 
-            return IStructure.findEntity(files, function, use.getName(), false, null) == null;
+            return EntitySearchers.findClass(files, function, use.getName()) == null;
         } else {
             return checkMissingTypeInRuntimeException(e.getCause());
         }
@@ -306,6 +385,14 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         if (type.isReferenceType()) {
             ResolvedReferenceType t = (ResolvedReferenceType) type;
 
+            // Обработка квалифаера
+            Qualifier qualifier = null;
+            String[] qParts = t.getId().split("\\.");
+            if (qParts.length > 1) {
+                qualifier = new Qualifier(Arrays.stream(qParts).limit(qParts.length - 1).collect(Collectors.joining(".")));
+            }
+
+            // Обработка параметров типа
             ArrayList<mai.student.intermediateStates.Type> params = new ArrayList<>();
             for (Pair<ResolvedTypeParameterDeclaration, ResolvedType> pair : t.getTypeParametersMap()) {
                 mai.student.intermediateStates.Type param = resolvedTypeToMyType(pair.b);
@@ -316,7 +403,7 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
                 params.add(param);
             }
 
-            return new mai.student.intermediateStates.Type(t.getId(), params);
+            return new mai.student.intermediateStates.Type(qParts[qParts.length - 1], params, qualifier);
         }
 
         return null;

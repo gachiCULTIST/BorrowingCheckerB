@@ -1,10 +1,11 @@
 package mai.student.tokenizers.java17;
 
+import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import mai.student.intermediateStates.*;
+import mai.student.utility.EntitySearchers;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ExpressionModifierVisitor extends VoidVisitorAdapter<Void> {
@@ -20,16 +21,17 @@ public class ExpressionModifierVisitor extends VoidVisitorAdapter<Void> {
 
     @Override
     public void visit(NameExpr nameExpr, Void arg) {
-        IStructure variable = IStructure.findEntity(files, scope, nameExpr.getNameAsString(), false, null);
+        VariableOrConst variable = EntitySearchers.findVariable(files, scope, nameExpr.getNameAsString(), false);
 
-        if (variable != null && variable.getStrucType() == StructureType.Variable) {
-            VariableOrConst var = (VariableOrConst) variable;
-            // TODO: rework field and method parameters types
-            var.actuateTypes((ArrayList<FileRepresentative>) files);
+        if (variable != null) {
+            variable.actuateTypes(files);
 
-            if (var.getReplacer() != null) {
-                nameExpr.replace(var.getReplacer());
+            if (variable.getReplacer() != null) {
+                nameExpr.replace(variable.getReplacer());
             }
         }
     }
+
+    @Override
+    public void visit(FieldAccessExpr fieldAccessExpr, Void arg) {}
 }

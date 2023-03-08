@@ -3,10 +3,12 @@ package mai.student.intermediateStates;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import mai.student.utility.EntitySearchers;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class Type {
 
@@ -16,9 +18,8 @@ public class Type {
     private static final String TYPE_EXCEPTION = "Exception";
     private static final String TYPE_VAR = "var";
     private static final String TYPE_OBJECT = "Object";
-
-    // TODO: подумать про добавление кволифаера (пакет)
     private final String name;
+    private final Optional<Qualifier> qualifier;
     private final List<Type> params;
 
     private boolean isLinkSet = false;
@@ -27,26 +28,28 @@ public class Type {
     public Type(String name) {
         this.name = name;
         this.params = new ArrayList<>();
+        this.qualifier = Optional.empty();
     }
 
     public Type(String name, boolean isLinkSet) {
         this.name = name;
         this.params = new ArrayList<>();
         this.isLinkSet = isLinkSet;
+        this.qualifier = Optional.empty();
     }
 
-    public Type(String name, ArrayList<Type> params) {
+    public Type(String name, ArrayList<Type> params, Qualifier qualifier) {
         this.name = name;
-
         this.params = Objects.requireNonNullElseGet(params, ArrayList::new);
+        this.qualifier = Optional.ofNullable(qualifier);
     }
 
-    // TODO: check usage (is link always not null)
     public Type(String name, ArrayList<Type> params, DefinedClass link) {
         this.name = name;
         this.linkToClass = link;
 
         this.params = Objects.requireNonNullElseGet(params, ArrayList::new);
+        this.qualifier = Optional.empty();
     }
 
     public Type(String name, ArrayList<Type> params, DefinedClass link, boolean isLinkSet) {
@@ -55,6 +58,11 @@ public class Type {
         this.isLinkSet = isLinkSet;
 
         this.params = Objects.requireNonNullElseGet(params, ArrayList::new);
+        this.qualifier = Optional.empty();
+    }
+
+    public Optional<Qualifier> getQualifier() {
+        return qualifier;
     }
 
     public String getName() {
@@ -115,15 +123,6 @@ public class Type {
         return true;
     }
 
-    private static boolean isAutoCast(Type type, Type[] casting) {
-        for (Type cast : casting) {
-            if (type.equals(cast)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public String toString() {
         if (this.params.isEmpty()) {
             return this.name;
@@ -143,27 +142,23 @@ public class Type {
     }
 
     public ClassOrInterfaceType toClassOrInterfaceType() {
+        ClassOrInterfaceType scope = null;
+        if (qualifier.isPresent()) {
+            scope = qualifier.get().toParserForm();
+        }
+
         NodeList<com.github.javaparser.ast.type.Type> typeArgs = new NodeList<>();
         for (Type t : params) {
             typeArgs.add(t.toClassOrInterfaceType());
         }
 
-        return new ClassOrInterfaceType(null, new SimpleName(name), typeArgs);
+        return new ClassOrInterfaceType(scope, new SimpleName(name), typeArgs.isEmpty() ? null : typeArgs);
     }
 
     public void updateLink(IStructure scope, List<FileRepresentative> files) {
         this.isLinkSet = true;
+        this.linkToClass = EntitySearchers.findClass(files, scope, this);
 
-        IStructure link = IStructure.findEntity(files, scope, this.name, false, null);
-        if (link != null) {
-            if (link.getStrucType() == StructureType.Function) {
-                this.linkToClass = ((DefinedFunction) link).parent;
-            } else {
-                this.linkToClass = (DefinedClass) link;
-            }
-        } else {
-            this.linkToClass = null;
-        }
         for (Type p : this.params) {
             p.updateLink(scope, files);
         }

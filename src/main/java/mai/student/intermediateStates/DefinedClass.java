@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-// Класс для представления классов сравниваемых прграмм и интерфейсов
+// Класс для представления классов сравниваемых программ и интерфейсов
 public class DefinedClass implements IStructure {
 
     private final String className;
@@ -16,10 +16,7 @@ public class DefinedClass implements IStructure {
     public List<VariableOrConst> variablesAndConsts;
 
     public List<Type> inheritanceList;
-    @Deprecated
-    public ArrayList<DefinedClass> linksToAncestors;
 
-    // Параметризирование
     private boolean isParametrized = false;
 
     private boolean isLinked = false;
@@ -37,7 +34,6 @@ public class DefinedClass implements IStructure {
         innerClasses = new ArrayList<>();
         functions = new ArrayList<>();
         variablesAndConsts = new ArrayList<>();
-        linksToAncestors = new ArrayList<>();
 
         if (params != null) {
             this.params = params;
@@ -88,7 +84,7 @@ public class DefinedClass implements IStructure {
                 params.add(p.clone());
             }
         }
-        return new Type(className, params);
+        return new Type(className, params, this, true);
     }
 
     public ClassOrInterfaceType getClassOrInterfaceType() {

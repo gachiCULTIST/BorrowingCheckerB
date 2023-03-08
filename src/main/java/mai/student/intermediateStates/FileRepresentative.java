@@ -1,17 +1,18 @@
 package mai.student.intermediateStates;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 
 // Класс для представления файлов с исходным кодом
 public class FileRepresentative implements IStructure {
 
     private final Path filePath;
-    public String curPackage;
-    public ArrayList<String> imports;
-    public ArrayList<String> staticImports;
-    public ArrayList<DefinedClass> classes;
+
+    public Package curPackage;
+    public List<Import> imports;
+    public List<Import> staticImports;
+    public List<DefinedClass> classes;
 
     public FileRepresentative(Path filePath) {
         this.filePath = filePath;

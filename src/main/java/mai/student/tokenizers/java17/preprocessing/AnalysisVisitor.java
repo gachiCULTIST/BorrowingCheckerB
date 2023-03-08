@@ -12,6 +12,7 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
 import com.github.javaparser.ast.visitor.GenericListVisitorAdapter;
 import mai.student.intermediateStates.*;
+import mai.student.intermediateStates.Package;
 
 import java.util.*;
 
@@ -44,7 +45,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     @Override
     public List<IStructure> visit(PackageDeclaration declaration, IStructure arg) {
         FileRepresentative file = (FileRepresentative) arg;
-        file.curPackage = declaration.getNameAsString();
+        file.curPackage = new Package(declaration.getName());
 
         return super.visit(declaration, arg);
     }
@@ -53,12 +54,10 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
     public List<IStructure> visit(ImportDeclaration declaration, IStructure arg) {
         FileRepresentative file = (FileRepresentative) arg;
 
-        // TODO: сохраняю на всякий случай звездочку (не помню - она где-то обрабатывается?)
-        //  проверить при реализации SearchUtility
         if (declaration.isStatic()) {
-            file.staticImports.add(declaration.getNameAsString() + (declaration.isAsterisk() ? "*" : ""));
+            file.staticImports.add(new Import(declaration.getName(), true, declaration.isAsterisk()));
         } else {
-            file.imports.add(declaration.getNameAsString() + (declaration.isAsterisk() ? "*" : ""));
+            file.imports.add(new Import(declaration.getName(), false, declaration.isAsterisk()));
         }
 
         return super.visit(declaration, arg);
@@ -352,6 +351,12 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         }
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType t = type.asClassOrInterfaceType();
+
+            Qualifier qualifier = null;
+            if (t.getScope().isPresent()) {
+                qualifier = new Qualifier(processScope(t.getScope().get()));
+            }
+
             ArrayList<Type> params = new ArrayList<>();
 
             Optional<NodeList<com.github.javaparser.ast.type.Type>> args = t.getTypeArguments();
@@ -361,7 +366,7 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
                 }
             }
 
-            return new Type(t.getNameAsString(), params);
+            return new Type(t.getNameAsString(), params, qualifier);
         }
         if (type.isTypeParameter()) {
             return new Type(type.asTypeParameter().getNameAsString(), true);
@@ -386,6 +391,17 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
         }
 
         throw new UnsupportedOperationException("AnalysisVisitor.fromParserToMyType: unsupported type of type!");
+    }
+
+    // Обработка квалифаеров
+    private static Collection<String> processScope(ClassOrInterfaceType scope) {
+        if (scope == null) {
+            return new ArrayList<>();
+        }
+
+        Collection<String> result = processScope(scope.getScope().orElse(null));
+        result.add(scope.getNameAsString());
+        return result;
     }
 
     // Обертывание типов в массивы

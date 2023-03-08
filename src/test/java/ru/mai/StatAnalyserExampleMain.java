@@ -128,7 +128,7 @@ public class StatAnalyserExampleMain {
 //            HashMap<String, ArrayList<StatisticCollector>> statistic = new HashMap<>();
 //
 
-//            // TODO: run through all works
+            // TODO: run through all works
             int parseProblemCounter = 0;
             for (File f1 : dir.listFiles()) {
                 String name1 = f1.getName().split("_")[0];
@@ -157,8 +157,8 @@ public class StatAnalyserExampleMain {
                         CodeComparer codeComparer = new CodeComparer();
                         codeComparer.setFirstProgram(f1.toPath());
                         codeComparer.setSecondProgram(f2.toPath());
-                        System.out.println("!!!! TIME\n\tPreprocessing: " + JavaTokenizer.totalPreprocessingTime +
-                                "\n\tTokenizing: " + JavaTokenizer.totalTokenizingTime);
+//                        System.out.println("!!!! TIME\n\tPreprocessing: " + JavaTokenizer.totalPreprocessingTime +
+//                                "\n\tTokenizing: " + JavaTokenizer.totalTokenizingTime);
                         codeComparer.compare();
                         System.out.println(codeComparer.getResult());
 //                        System.out.println(codeComparer.isCheckPassed());
@@ -178,7 +178,7 @@ public class StatAnalyserExampleMain {
                 }
             }
             System.out.println("Parse problems: " + parseProblemCounter);
-//            // TODO: end
+            // TODO: end
 
 //
 //            // Подсчет среднего размера задания
@@ -347,27 +347,16 @@ public class StatAnalyserExampleMain {
 
 
             // TODO: check my files
-//            String myTest = "testfiles/ru/mai/";
+//            String myTest = "testfiles";
 //            try {
-//                ArrayList<Path> paths1 = new ArrayList<>();
-//                paths1.add(Path.of(myTest + "file1.java"));
-//                paths1.add(Path.of(myTest + "file2.java"));
-//                paths1.add(Path.of(myTest + "file3.java"));
-//                paths1.add(Path.of(myTest + "file4.java"));
-//                paths1.add(Path.of(myTest + "file5.java"));
+//                CodeComparer codeComparer = new CodeComparer();
+//                codeComparer.setFirstProgram(Path.of(myTest));
+//                codeComparer.setSecondProgram(Path.of(myTest));
+////                System.out.println("!!!! TIME\n\tPreprocessing: " + JavaTokenizer.totalPreprocessingTime +
+////                        "\n\tTokenizing: " + JavaTokenizer.totalTokenizingTime);
+//                codeComparer.compare();
 //
-//                ArrayList<Path> paths2 = new ArrayList<>();
-//                paths2.add(Path.of(myTest + "file1.java"));
-//                paths2.add(Path.of(myTest + "file2.java"));
-//                paths2.add(Path.of(myTest + "file3.java"));
-//                paths2.add(Path.of(myTest + "file4.java"));
-//                paths2.add(Path.of(myTest + "file5.java"));
-//
-//                CodeComparer codeComparer = new CodeComparer(paths1, paths2);
-//                System.out.println(JavaTokenizer.totalTime);
-//
-////                codeComparer.compare();
-////                System.out.println(codeComparer.getResult() + " " + codeComparer.isCheckPassed());
+//                System.out.println(codeComparer.getResult());
 //            } catch (Exception e) {
 //                System.out.println(e);
 //                throw new RuntimeException(e);

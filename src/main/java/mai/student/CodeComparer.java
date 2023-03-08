@@ -3,6 +3,7 @@ package mai.student;
 import mai.student.tokenizers.AbstractTokenizer;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.java17.JavaTokenizer;
+import mai.student.utility.UtilityClass;
 
 import java.nio.file.Path;
 import java.util.*;
