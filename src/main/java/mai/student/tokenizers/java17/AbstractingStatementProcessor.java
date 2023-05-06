@@ -139,6 +139,10 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
 
                     newType.updateLink(function, files);
                     variable.setRealType(newType);
+                } catch (UnsupportedOperationException e) { // Не поддерживает конструкции - String[]::new
+                    if (!e.getMessage().equals("com.github.javaparser.ast.type.ArrayType")) {
+                        throw e;
+                    }
                 } catch (UnsolvedSymbolException e) {
                     if (e.getCause() == null) {
                         // Откуда-то появились сторонние классы
