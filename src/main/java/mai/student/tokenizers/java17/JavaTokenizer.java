@@ -78,7 +78,7 @@ public class JavaTokenizer extends AbstractTokenizer {
 
         Map<CallableDeclaration<?>, DefinedFunction> methodMatcher = new HashMap<>();
         for (FileRepresentative file : files) {
-            System.out.println("File: " + file.getFilePath().toString());
+//            System.out.println("File: " + file.getFilePath().toString());
             long time = timer.millis();
             new Preprocessor(file, methodMatcher).preprocess();
             totalPreprocessingTime += timer.millis() - time;

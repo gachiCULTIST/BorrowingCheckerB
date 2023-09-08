@@ -1,42 +1,50 @@
-package mai.student.tokenizers;
+package mai.student.internet;
 
-import mai.student.intermediateStates.FileRepresentative;
+import mai.student.internet.common.File;
+import mai.student.tokenizers.CodeLanguage;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
-public abstract class AbstractTokenizer {
+public abstract class AbstractInternetBorrowingFinder implements InternetBorrowingFinder {
 
     protected CodeLanguage language;
-    protected List<FileRepresentative> files;
-    protected Map<String, Integer> tokens;
-    protected List<Integer> result;
+    protected Set<File> files;
+    private final Function<Path, File> constructor;
 
-    public AbstractTokenizer(Path source, CodeLanguage lang) {
-        language = lang;
+    public AbstractInternetBorrowingFinder(Path source, CodeLanguage lang, Function<Path, File> constructor){
+        this.language = lang;
+        this.constructor = constructor;
+        this.setFiles(source);
+    }
 
-        this.files = new ArrayList<>();
+
+    @Override
+    public void setProgram(Path source) {
+        this.setFiles(source);
+    }
+
+    protected void setFiles(Path source) {
+        this.files = new HashSet<>();
 
         if (Files.isDirectory(source)) {
-//            System.out.println(source);
             for (Path path : collectFiles(source)) {
-                FileRepresentative file = new FileRepresentative(path);
+                File file = constructor.apply(path);
                 this.files.add(file);
             }
         } else {
-            this.files.add(new FileRepresentative(source));
+            this.files.add(constructor.apply(source));
         }
-
-        tokens = new HashMap<>();
     }
 
-    private List<Path> collectFiles(Path source) {
+    protected List<Path> collectFiles(Path source) {
         try (Stream<Path> insides = Files.list(source)) {
             return insides.reduce(new ArrayList<>(),
                     (paths, path) -> {
@@ -56,14 +64,4 @@ public abstract class AbstractTokenizer {
             throw new IllegalArgumentException("Wrong source path: " + source, e);
         }
     }
-
-    public List<Integer> getResult() {
-        return result;
-    }
-
-    public CodeLanguage getLanguage() {
-        return language;
-    }
-
-    public abstract void tokenize();
 }
