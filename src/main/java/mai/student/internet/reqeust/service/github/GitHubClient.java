@@ -27,7 +27,7 @@ public class GitHubClient {
     private static final String VERSION = "2022-11-28";
 
     // TODO: token to config;
-    private static final String TOKEN = "";
+    private static final String TOKEN = "change";
 
 //    public final Logger logger = LoggerFactory.getLogger(this.getClass());
 
