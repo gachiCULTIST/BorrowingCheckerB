@@ -2,6 +2,8 @@ package mai.student.internet.reqeust.service.github.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import mai.student.internet.common.stats.FileStatisticExtractable;
+import mai.student.internet.common.stats.RepoStatisticExtractable;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -17,7 +19,7 @@ public class CodeSearchResponse {
     private List<Item> items;
 
     @Getter
-    private static class Item {
+    public static class Item implements FileStatisticExtractable, RepoStatisticExtractable {
         private String name;
         private Path path;
         private String sha;
@@ -29,8 +31,28 @@ public class CodeSearchResponse {
         private Repository repository;
         private int score;
 
+        @Override
+        public String extractFileName() {
+            return this.name;
+        }
+
+        @Override
+        public URL extractFileUrl() {
+            return this.htmlUrl;
+        }
+
+        @Override
+        public String extractRepoName() {
+            return this.repository.name;
+        }
+
+        @Override
+        public URL extractRepoUrl() {
+            return this.repository.htmlUrl;
+        }
+
         @Getter
-        private static class Repository {
+        public static class Repository {
             private long id;
             @JsonProperty("node_id")
             private String nodeId;
@@ -119,7 +141,7 @@ public class CodeSearchResponse {
             private URL releasesUrl;
 
             @Getter
-            private static class Owner {
+            public static class Owner {
                 private String login;
                 private long id;
                 @JsonProperty("node_id")

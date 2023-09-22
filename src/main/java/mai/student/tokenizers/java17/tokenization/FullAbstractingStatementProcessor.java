@@ -1,11 +1,10 @@
-package mai.student.tokenizers.java17;
+package mai.student.tokenizers.java17.tokenization;
 
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.CallableDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.VoidVisitor;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
@@ -19,16 +18,26 @@ import mai.student.utility.EntitySearchers;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class AbstractingStatementProcessor extends BasicStatementProcessor {
+public class FullAbstractingStatementProcessor extends NameAbstractingStatementProcessor {
 
-    protected static String IDENTIFIER = "*ident*";
+    protected final DefinedFunction function;
+    protected final List<FileRepresentative> files;
 
     protected Map<CallableDeclaration<?>, DefinedFunction> methodMatcher;
 
-    public AbstractingStatementProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function, List<FileRepresentative> files, VoidVisitor<StatementProcessor> visitor, Map<CallableDeclaration<?>, DefinedFunction> methodMatcher) {
-        super(tokenDictionary, function, files, visitor);
+    public FullAbstractingStatementProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function, List<FileRepresentative> files, VoidVisitor<StatementProcessor> visitor, Map<CallableDeclaration<?>, DefinedFunction> methodMatcher) {
+        super(tokenDictionary, function.getBody(), visitor);
 
         this.methodMatcher = methodMatcher;
+        this.function = function;
+        this.files = files;
+    }
+
+    @Override
+    public List<Integer> run() {
+        function.tokenized();
+        process(visitable);
+        return result;
     }
 
     // Учитываем изменение значений только локальных переменных
@@ -207,8 +216,8 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
                     matchedFunc.actuateTypes(files);
 
                     if (!matchedFunc.isTokenized()) {
-                        AbstractingStatementProcessor processor = new AbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
-                        processor.run();
+                        FullAbstractingStatementProcessor processor = new FullAbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
+                        matchedFunc.addTokens(processor.run());
                     }
 
                     function.addFunctionTokens(matchedFunc);
@@ -289,8 +298,8 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
                     matchedFunc.actuateTypes(files);
 
                     if (!matchedFunc.isTokenized()) {
-                        AbstractingStatementProcessor processor = new AbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
-                        processor.run();
+                        FullAbstractingStatementProcessor processor = new FullAbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
+                        matchedFunc.addTokens(processor.run());
                     }
 
                     function.addFunctionTokens(matchedFunc);
@@ -345,41 +354,6 @@ public class AbstractingStatementProcessor extends BasicStatementProcessor {
         } else {
             return getNameOfInnerUnsolvedSymbolException(e.getCause());
         }
-    }
-
-    @Override
-    protected void addToken(String lexeme) {
-        if (tokenDictionary.containsKey(lexeme)) {
-            function.addToken(tokenDictionary.get(lexeme));
-            return;
-        }
-
-        function.addToken(tokenDictionary.get(IDENTIFIER));
-    }
-
-    @Override
-    protected void addTypeAsTokens(Type type) {
-        if (type.isClassOrInterfaceType()) {
-            ClassOrInterfaceType t = type.asClassOrInterfaceType();
-
-            // id
-            addToken(t.getNameAsString());
-
-            // generic params
-            if (t.getTypeArguments().isPresent()) {
-                addToken(LOWER);
-                addTypeElemList(t.getTypeArguments().get(), COMMA);
-                addToken(GREATER);
-            }
-            return;
-        }
-
-        super.addTypeAsTokens(type);
-    }
-
-    @Override
-    protected void addComplexName(Name name) {
-        addToken(IDENTIFIER);
     }
 
     protected static mai.student.intermediateStates.Type resolvedTypeToMyType(ResolvedType type) {

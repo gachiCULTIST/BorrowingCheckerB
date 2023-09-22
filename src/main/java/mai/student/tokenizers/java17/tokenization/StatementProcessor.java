@@ -1,11 +1,21 @@
-package mai.student.tokenizers.java17;
+package mai.student.tokenizers.java17.tokenization;
 
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
+import com.github.javaparser.ast.visitor.Visitable;
+
+import java.util.List;
 
 interface StatementProcessor {
 
-    void run();
+    List<Integer> run();
+
+    // Запуск для произвольного элемента
+    void process(Visitable visitable);
+
+    // Объявление констант перечисления
+    void process(EnumConstantDeclaration constantDeclaration);
 
     // []
     void process(ArrayAccessExpr arrayAccessExpr);

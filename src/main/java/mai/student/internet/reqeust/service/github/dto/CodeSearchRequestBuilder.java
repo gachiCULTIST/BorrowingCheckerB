@@ -30,14 +30,13 @@ public class CodeSearchRequestBuilder {
         }
 
         StringBuilder query = new StringBuilder();
-        query.append(queryContent);
-
         if (this.queryLanguage != null) {
-            query.append(" ")
-                    .append(QueryParams.LANGUAGE.getName())
+            query.append(QueryParams.LANGUAGE.getName())
                     .append(":")
-                    .append(queryLanguage.getName());
+                    .append(queryLanguage.getName())
+                    .append(" ");
         }
+        query.append(queryContent);
 
         List<NameValuePair> result = new ArrayList<>();
         result.add(new BasicNameValuePair(RequestParams.QUERY.getName(), query.toString()));

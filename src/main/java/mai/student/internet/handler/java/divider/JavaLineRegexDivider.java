@@ -1,16 +1,13 @@
-package mai.student.internet.handler.java;
+package mai.student.internet.handler.java.divider;
 
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.visitor.ModifierVisitor;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import mai.student.internet.common.Divider;
 import mai.student.internet.common.File;
 import mai.student.internet.handler.java.filter.AbstractNameFilter;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,28 +17,14 @@ import java.util.stream.Collectors;
 
 @Getter
 @Setter
-public class JavaLineRegexDivider implements Divider {
-
-    private List<ModifierVisitor<?>> filterChain = new ArrayList<>();
+public class JavaLineRegexDivider extends AbstractJavaDivider {
     private ModifierVisitor<Void> finalizer = new AbstractNameFilter();
-
-    public void addFilter(ModifierVisitor<?> filter) {
-        filterChain.add(filter);
-    }
 
     @Override
     public List<String> divide(File file) {
         List<String> result;
 
-        CompilationUnit tree;
-        try {
-            tree = StaticJavaParser.parse(file.getFilePath());
-        } catch (IOException ex) {
-            throw new RuntimeException("Ошибка парсинга файла: " + file.getFilePath(), ex);
-        }
-
-        // Фильтрыыыыыы
-        filterChain.forEach(f -> tree.accept(f, null));
+        CompilationUnit tree = getFilteredTree(file);
         tree.accept(finalizer, null);
 
         //Экранирование спецсимволов

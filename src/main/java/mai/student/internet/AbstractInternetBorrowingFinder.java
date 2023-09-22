@@ -13,13 +13,13 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-public abstract class AbstractInternetBorrowingFinder implements InternetBorrowingFinder {
+public abstract class AbstractInternetBorrowingFinder<T extends File> implements InternetBorrowingFinder {
 
     protected CodeLanguage language;
-    protected Set<File> files;
-    private final Function<Path, File> constructor;
+    protected Set<T> files;
+    private final Function<Path, T> constructor;
 
-    public AbstractInternetBorrowingFinder(Path source, CodeLanguage lang, Function<Path, File> constructor){
+    public AbstractInternetBorrowingFinder(Path source, CodeLanguage lang, Function<Path, T> constructor){
         this.language = lang;
         this.constructor = constructor;
         this.setFiles(source);
@@ -36,7 +36,7 @@ public abstract class AbstractInternetBorrowingFinder implements InternetBorrowi
 
         if (Files.isDirectory(source)) {
             for (Path path : collectFiles(source)) {
-                File file = constructor.apply(path);
+                T file = constructor.apply(path);
                 this.files.add(file);
             }
         } else {

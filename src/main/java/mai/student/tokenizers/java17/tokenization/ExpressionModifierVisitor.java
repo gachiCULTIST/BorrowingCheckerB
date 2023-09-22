@@ -1,4 +1,4 @@
-package mai.student.tokenizers.java17;
+package mai.student.tokenizers.java17.tokenization;
 
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.NameExpr;

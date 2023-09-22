@@ -1,21 +1,18 @@
-package mai.student.tokenizers.java17;
+package mai.student.tokenizers.java17.tokenization;
 
 import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.*;
+import com.github.javaparser.ast.visitor.Visitable;
 import com.github.javaparser.ast.visitor.VoidVisitor;
-import mai.student.intermediateStates.DefinedFunction;
-import mai.student.intermediateStates.FileRepresentative;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 // Базовый токенизатор
 // Просто вставляет элемент в представление при этом,
@@ -73,35 +70,54 @@ public class BasicStatementProcessor implements StatementProcessor {
     protected int indexForNextElement;
 
     protected final Map<String, Integer> tokenDictionary;
-
-    protected final DefinedFunction function;
-
-    protected final List<FileRepresentative> files;
+    protected final Visitable visitable;
+    protected final List<Integer> result = new ArrayList<>();
 
     // Вообще визитор используется для определения типа Expression,
     // по скольку все элементы составных выражений представляет данный тип
     protected final VoidVisitor<StatementProcessor> visitor;
 
 
-    public BasicStatementProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function,
-                                   List<FileRepresentative> files, VoidVisitor<StatementProcessor> visitor) {
+    public BasicStatementProcessor(Map<String, Integer> tokenDictionary, Visitable visitable,
+                                   VoidVisitor<StatementProcessor> visitor) {
 
-        if (tokenDictionary == null || function == null || files == null || visitor == null) {
+        if (tokenDictionary == null || visitable == null || visitor == null) {
             throw new IllegalArgumentException("BasicStatementProcessor: constructor arguments must be not null!");
         }
 
         this.tokenDictionary = tokenDictionary;
         this.indexForNextElement = tokenDictionary.size() + TOKEN_SPAN;
 
-        this.function = function;
-        this.files = files;
+        this.visitable = visitable;
         this.visitor = visitor;
     }
 
     @Override
-    public void run() {
-        function.tokenized();
-        process(function.getBody());
+    public List<Integer> run() {
+        process(visitable);
+        return result;
+    }
+
+    @Override
+    public void process(Visitable visitable) {
+        visitable.accept(visitor, this);
+    }
+
+    @Override
+    public void process(EnumConstantDeclaration constantDeclaration) {
+        addToken(constantDeclaration.getName().asString());
+
+        NodeList<Expression> args = constantDeclaration.getArguments();
+        if (args != null && args.isNonEmpty()) {
+            addToken(LEFT_PAREN);
+            for (int i = 0; i < args.size(); ++i) {
+                if (i != 0) {
+                    addToken(COMMA);
+                }
+                process(args.get(i));
+            }
+            addToken(RIGHT_PAREN);
+        }
     }
 
     @Override
@@ -480,6 +496,7 @@ public class BasicStatementProcessor implements StatementProcessor {
         addToken(LEFT_PAREN);
         addExpressionElemList(explicitConstructorInvocationStmt.getArguments(), COMMA);
         addToken(RIGHT_PAREN);
+        addToken(SEMICOLON);
     }
 
     @Override
@@ -737,7 +754,7 @@ public class BasicStatementProcessor implements StatementProcessor {
             ++indexForNextElement;
         }
 
-        function.addToken(tokenDictionary.get(lexeme));
+        result.add(tokenDictionary.get(lexeme));
     }
 
     // insert qualifier.identifier name

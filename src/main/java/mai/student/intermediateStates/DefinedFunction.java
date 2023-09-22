@@ -86,6 +86,10 @@ public class DefinedFunction implements IStructure {
         tokens.add(token);
     }
 
+    public void addTokens(List<Integer> tokens) {
+        this.tokens.addAll(tokens);
+    }
+
     public void addFunctionTokens(DefinedFunction function) {
         tokens.addAll(function.tokens);
     }
