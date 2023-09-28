@@ -6,6 +6,6 @@ public class RepoStatisticCollector extends AbstractStatisticCollector<RepoStati
 
     @Override
     public void process(RepoStatisticExtractable data) {
-        incrementCounter(data.extractRepoUrl(), data.extractRepoName());
+        incrementCounter(data.extractRepoUrl(), data.extractRepoName(), data.getRepo(), data.getOwner());
     }
 }

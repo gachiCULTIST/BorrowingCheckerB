@@ -21,6 +21,8 @@ public class SourceStatistic {
     private int counter = 1;
     private final String sourceName;
     private final URL sourceUrl;
+    private final String repo;
+    private final String owner;
 
     public int count() {
         return ++counter;

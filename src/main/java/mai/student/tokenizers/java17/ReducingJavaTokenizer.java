@@ -4,6 +4,7 @@ import com.github.javaparser.ast.body.CallableDeclaration;
 import mai.student.intermediateStates.*;
 import mai.student.tokenizers.AbstractTokenizer;
 import mai.student.tokenizers.CodeLanguage;
+import mai.student.tokenizers.NoStartPointException;
 import mai.student.tokenizers.java17.preprocessing.Preprocessor;
 import mai.student.tokenizers.java17.tokenization.FullAbstractingStatementProcessor;
 import mai.student.tokenizers.java17.tokenization.BasicStatementProcessor;
@@ -78,7 +79,7 @@ public class ReducingJavaTokenizer extends AbstractTokenizer {
         DefinedFunction mainFunc = findMainFunction();
         if (mainFunc == null) {
             LOGGER.log(Level.SEVERE, "Can't find main method");
-            throw new UnsupportedOperationException("Can't find main method");
+            throw new NoStartPointException("Can't find main method");
         }
 
         LOGGER.info("Tokenizing started.");

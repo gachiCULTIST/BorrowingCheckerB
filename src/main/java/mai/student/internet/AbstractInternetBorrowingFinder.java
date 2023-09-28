@@ -17,6 +17,7 @@ public abstract class AbstractInternetBorrowingFinder<T extends File> implements
 
     protected CodeLanguage language;
     protected Set<T> files;
+    protected Path source;
     private final Function<Path, T> constructor;
 
     public AbstractInternetBorrowingFinder(Path source, CodeLanguage lang, Function<Path, T> constructor){

@@ -6,6 +6,6 @@ public class FileStatisticCollector extends AbstractStatisticCollector<FileStati
 
     @Override
     public void process(FileStatisticExtractable data) {
-        incrementCounter(data.extractFileUrl(), data.extractFileName());
+        incrementCounter(data.extractFileUrl(), data.extractFileName(), data.getRepo(), data.getOwner());
     }
 }

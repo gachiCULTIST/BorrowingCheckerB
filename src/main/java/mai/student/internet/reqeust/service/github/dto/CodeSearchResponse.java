@@ -42,6 +42,16 @@ public class CodeSearchResponse {
         }
 
         @Override
+        public String getRepo() {
+            return this.getRepository().getName();
+        }
+
+        @Override
+        public String getOwner() {
+            return this.getRepository().getOwner().getLogin();
+        }
+
+        @Override
         public String extractRepoName() {
             return this.repository.name;
         }

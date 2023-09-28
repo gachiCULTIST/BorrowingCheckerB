@@ -12,13 +12,13 @@ public abstract class AbstractStatisticCollector<T extends Extractable> implemen
 
     protected Map<URL, SourceStatistic> stats = new HashMap<>();
 
-    protected void incrementCounter(URL url, String name) {
+    protected void incrementCounter(URL url, String name, String repo, String owner) {
         if (stats.containsKey(url)) {
             stats.get(url).count();
             return;
         }
 
-        stats.put(url, new SourceStatistic(name, url));
+        stats.put(url, new SourceStatistic(name, url, repo, owner));
     }
 
     @Override
