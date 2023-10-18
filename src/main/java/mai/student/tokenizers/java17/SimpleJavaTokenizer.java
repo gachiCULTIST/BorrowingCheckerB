@@ -60,7 +60,6 @@ public class SimpleJavaTokenizer extends AbstractTokenizer {
         try {
             tree = StaticJavaParser.parse(files.get(0).getFilePath());
         } catch (IOException e) {
-            //TODO: пока буду пробрасывать такое исключение - надо заменить
             throw new RuntimeException(e.getMessage());
         }
         tree.accept(new DeletePackageFilter(), null);
@@ -71,6 +70,6 @@ public class SimpleJavaTokenizer extends AbstractTokenizer {
         result = processor.run();
 
 //         Запись результатов теста
-        printTree(result);
+//        printTree(result);
     }
 }

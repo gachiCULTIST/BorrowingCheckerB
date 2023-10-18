@@ -105,6 +105,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(EnumConstantDeclaration constantDeclaration) {
+        System.out.println(constantDeclaration);
+
         addToken(constantDeclaration.getName().asString());
 
         NodeList<Expression> args = constantDeclaration.getArguments();
@@ -122,6 +124,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ArrayAccessExpr arrayAccessExpr) {
+        System.out.println(arrayAccessExpr);
+
         arrayAccessExpr.getName().accept(visitor, this);
         addToken(LEFT_BRACKET);
         arrayAccessExpr.getIndex().accept(visitor, this);
@@ -130,6 +134,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ArrayCreationExpr arrayCreationExpr) {
+        System.out.println(arrayCreationExpr);
+
         addToken(NEW);
 
         addTypeAsTokens(arrayCreationExpr.getElementType());
@@ -151,6 +157,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ArrayInitializerExpr arrayInitializerExpr) {
+        System.out.println(arrayInitializerExpr);
+
         addToken(LEFT_BRACE);
         addExpressionElemList(arrayInitializerExpr.getValues(), COMMA);
         addToken(RIGHT_BRACE);
@@ -158,6 +166,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(AssignExpr assignExpr) {
+        System.out.println(assignExpr);
+
         assignExpr.getTarget().accept(visitor, this);
         addToken(assignExpr.getOperator().asString());
         assignExpr.getValue().accept(visitor, this);
@@ -165,6 +175,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(BinaryExpr binaryExpr) {
+        System.out.println(binaryExpr);
+
         binaryExpr.getLeft().accept(visitor, this);
         addToken(binaryExpr.getOperator().asString());
         binaryExpr.getRight().accept(visitor, this);
@@ -172,6 +184,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(CastExpr castExpr) {
+        System.out.println(castExpr);
+
         addToken(LEFT_PAREN);
         addTypeAsTokens(castExpr.getType());
         addToken(RIGHT_PAREN);
@@ -180,6 +194,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ClassExpr classExpr) {
+        System.out.println(classExpr);
+
         addTypeAsTokens(classExpr.getType());
         addToken(DOT);
         addToken(CLASS);
@@ -187,6 +203,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ConditionalExpr conditionalExpr) {
+        System.out.println(conditionalExpr);
+
         conditionalExpr.getCondition().accept(visitor, this);
         addToken(QUESTION);
         conditionalExpr.getThenExpr().accept(visitor, this);
@@ -196,6 +214,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(EnclosedExpr enclosedExpr) {
+        System.out.println(enclosedExpr);
+
         addToken(LEFT_PAREN);
         enclosedExpr.getInner().accept(visitor, this);
         addToken(RIGHT_PAREN);
@@ -203,6 +223,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(FieldAccessExpr fieldAccessExpr) {
+        System.out.println(fieldAccessExpr);
+
         fieldAccessExpr.getScope().accept(visitor, this);
         addToken(DOT);
         addToken(fieldAccessExpr.getName().asString());
@@ -210,6 +232,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(InstanceOfExpr instanceOfExpr) {
+        System.out.println(instanceOfExpr);
+
         instanceOfExpr.getExpression().accept(visitor, this);
         addToken(INSTANCE_OF);
 
@@ -226,6 +250,8 @@ public class BasicStatementProcessor implements StatementProcessor {
     // При обработке нельзя определить, были ли указаны фигурные скобки у параметров или нет
     @Override
     public void process(LambdaExpr lambdaExpr) {
+        System.out.println(lambdaExpr);
+
         if (lambdaExpr.isEnclosingParameters()) {
             addToken(LEFT_PAREN);
         }
@@ -303,6 +329,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(MethodReferenceExpr methodReferenceExpr) {
+        System.out.println(methodReferenceExpr);
+
         // scope
         methodReferenceExpr.getScope().accept(visitor, this);
         addToken(COLON);
@@ -345,12 +373,16 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(PatternExpr patternExpr) {
+        System.out.println(patternExpr);
+
         addTypeAsTokens(patternExpr.getType());
         addToken(patternExpr.getNameAsString());
     }
 
     @Override
     public void process(SuperExpr superExpr) {
+        System.out.println(superExpr);
+
         superExpr.getTypeName().ifPresent(type -> {
             addComplexName(type);
             addToken(DOT);
@@ -377,6 +409,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ThisExpr thisExpr) {
+        System.out.println(thisExpr);
+
         thisExpr.getTypeName().ifPresent(name -> {
             addComplexName(name);
             addToken(DOT);
@@ -391,6 +425,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(UnaryExpr unaryExpr) {
+        System.out.println(unaryExpr);
+
         if (unaryExpr.isPrefix()) {
             addToken(unaryExpr.getOperator().asString());
             unaryExpr.getExpression().accept(visitor, this);
@@ -433,6 +469,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(AssertStmt assertStmt) {
+        System.out.println(assertStmt);
+
         addToken(ASSERT);
         assertStmt.getCheck().accept(visitor, this);
         assertStmt.getMessage().ifPresent(message -> {
@@ -444,6 +482,7 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(BlockStmt blockStmt) {
+        System.out.println("!!!!!!!!!!!!!!!!!!!\n" + blockStmt);
         addToken(LEFT_BRACE);
         blockStmt.getStatements().forEach(statement -> statement.accept(visitor, this));
         addToken(RIGHT_BRACE);
@@ -451,6 +490,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(BreakStmt breakStmt) {
+        System.out.println(breakStmt);
+
         addToken(BREAK);
         breakStmt.getLabel().ifPresent(label -> addToken(label.asString()));
         addToken(SEMICOLON);
@@ -458,6 +499,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ContinueStmt continueStmt) {
+        System.out.println(continueStmt);
+
         addToken(CONTINUE);
         continueStmt.getLabel().ifPresent(label -> addToken(label.asString()));
         addToken(SEMICOLON);
@@ -465,6 +508,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(DoStmt doStmt) {
+        System.out.println(doStmt);
+
         addToken(DO);
 
         // body
@@ -485,6 +530,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ExplicitConstructorInvocationStmt explicitConstructorInvocationStmt) {
+        System.out.println(explicitConstructorInvocationStmt);
+
         // super or this
         if (explicitConstructorInvocationStmt.isThis()) {
             addToken(THIS);
@@ -501,6 +548,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ForEachStmt forEachStmt) {
+        System.out.println(forEachStmt);
+
         addToken(FOR);
 
         // var definition
@@ -518,6 +567,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ForStmt forStmt) {
+        System.out.println(forStmt);
+
         addToken(FOR);
 
         addToken(LEFT_PAREN);
@@ -539,6 +590,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(IfStmt ifStmt) {
+        System.out.println(ifStmt);
+
         addToken(IF);
 
         // condition
@@ -558,6 +611,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(LabeledStmt labeledStmt) {
+        System.out.println(labeledStmt);
+
         addToken(labeledStmt.getLabel().asString());
         addToken(COLON);
         labeledStmt.getStatement().accept(visitor, this);
@@ -575,6 +630,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ReturnStmt returnStmt) {
+        System.out.println(returnStmt);
+
         addToken(RETURN);
         returnStmt.getExpression().ifPresent(result -> result.accept(visitor, this));
         addToken(SEMICOLON);
@@ -587,6 +644,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(SynchronizedStmt synchronizedStmt) {
+        System.out.println(synchronizedStmt);
+
         addToken(SYNCHRONIZED);
 
         // lock
@@ -600,6 +659,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ThrowStmt throwStmt) {
+        System.out.println(throwStmt);
+
         addToken(THROW);
         throwStmt.getExpression().accept(visitor, this);
         addToken(SEMICOLON);
@@ -607,6 +668,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(TryStmt tryStmt) {
+        System.out.println(tryStmt);
+
         addToken(TRY);
 
         // resources
@@ -647,6 +710,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(WhileStmt whileStmt) {
+        System.out.println(whileStmt);
+
         addToken(WHILE);
 
         // condition
@@ -660,6 +725,8 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(YieldStmt yieldStmt) {
+        System.out.println(yieldStmt);
+
         addToken(YIELD);
         yieldStmt.getExpression().accept(visitor, this);
         addToken(SEMICOLON);
@@ -667,8 +734,10 @@ public class BasicStatementProcessor implements StatementProcessor {
 
     @Override
     public void process(ExpressionStmt expressionStmt) {
+        System.out.println("EXPR " + expressionStmt);
         expressionStmt.getExpression().accept(visitor, this);
         addToken(SEMICOLON);
+        System.out.println("EXPR end");
     }
 
     // Обработка SwitchExpr и SwitchStmt

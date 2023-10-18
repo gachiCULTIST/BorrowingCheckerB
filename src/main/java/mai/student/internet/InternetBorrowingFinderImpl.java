@@ -1,5 +1,6 @@
 package mai.student.internet;
 
+import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
@@ -29,6 +30,7 @@ import mai.student.internet.reqeust.service.github.dto.enums.QueryLanguages;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.NoStartPointException;
 import mai.student.utility.ConfigReader;
+import mai.student.utility.UtilityClass;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.NameValuePair;
 
@@ -86,20 +88,24 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
         }
 
         try {
+            CodeLanguage lang = UtilityClass.getLanguage(source);
+
             CodeComparer codeComparer = new ReducingCodeComparer();
-            codeComparer.setFirstProgram(source);
+            codeComparer.setFirstProgram(source, lang);
 
             List<SourceStatistic> reposStatistic = new ArrayList<>(repoStatisticCollector.getResult());
             reposStatistic.sort(new SourceStatisticComparator());
             for (int i = 0; i < ANALYSING_AMOUNT; ++i) {
                 try {
-                    hardWay(codeComparer, reposStatistic.get(i));
-                } catch (NoStartPointException ex) {
-                    System.out.println("Не удалось пройти сложный путь");
+                    hardWay(codeComparer, reposStatistic.get(i), lang);
+                } catch (NoStartPointException | ParseProblemException ex) {
+                    System.out.println(ex.getMessage());
+                    ex.printStackTrace();
                     // TODO: log
                 }
             }
         } catch (NoStartPointException ex) {
+            System.out.println("Не удалось пройти сложный путь");
             // TODO: log
         }
 
@@ -108,9 +114,9 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
         return result;
     }
 
-    private void hardWay(CodeComparer codeComparer, SourceStatistic source) {
+    private void hardWay(CodeComparer codeComparer, SourceStatistic source, CodeLanguage lang) {
         extractor.extractRepo(source.getOwner(), source.getRepo());
-        codeComparer.setSecondProgram(extractor.getDestination());
+        codeComparer.setSecondProgram(extractor.getDestination(), lang);
         codeComparer.compare();
         result.add(new InternetSearchResult()
                 .setSource(source.getSourceUrl())
@@ -130,12 +136,16 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
             CodeSearchResponse.Item target = sources.stream().filter(s -> s.extractFileUrl().equals(statistic.getSourceUrl())).findFirst().orElseThrow();
             extractor.extractFile(target.getRepository().getOwner().getLogin(), target.getRepository().getName(), target.getPath());
 
-            codeComparer.setSecondProgram(Path.of(extractor.getDestination().toString(), target.getName()));
-            codeComparer.compare();
+            try {
+                codeComparer.setSecondProgram(Path.of(extractor.getDestination().toString(), target.getName()));
+                codeComparer.compare();
 
-            result.add(new InternetSearchResult().setTarget(file.getFilePath())
-                    .setSource(target.getHtmlUrl())
-                    .setOriginality(codeComparer.getResult()));
+                result.add(new InternetSearchResult().setTarget(file.getFilePath())
+                        .setSource(target.getHtmlUrl())
+                        .setOriginality(codeComparer.getResult()));
+            } catch (ParseProblemException ex) {
+                // TODO: log
+            }
         }
     }
 
@@ -152,7 +162,7 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
 
             ex.printStackTrace();
 
-            if (ex.getCode() == HttpStatus.SC_UNPROCESSABLE_ENTITY) {
+            if (ex.getCode() != HttpStatus.SC_FORBIDDEN) {
                 System.out.println(ex.getUri().toString());
                 throw ex;
             }

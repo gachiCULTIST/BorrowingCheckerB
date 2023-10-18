@@ -156,10 +156,15 @@ public class Type {
     }
 
     public void updateLink(IStructure scope, List<FileRepresentative> files) {
+        System.out.println("update: " + scope.getName());
+
         this.isLinkSet = true;
         this.linkToClass = EntitySearchers.findClass(files, scope, this);
 
+        System.out.println("update 0");
+
         for (Type p : this.params) {
+            System.out.println("update 1");
             p.updateLink(scope, files);
         }
     }

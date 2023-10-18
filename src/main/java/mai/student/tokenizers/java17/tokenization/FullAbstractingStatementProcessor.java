@@ -22,15 +22,17 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
 
     protected final DefinedFunction function;
     protected final List<FileRepresentative> files;
+    protected final boolean assertMissingClasses;
 
     protected Map<CallableDeclaration<?>, DefinedFunction> methodMatcher;
 
-    public FullAbstractingStatementProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function, List<FileRepresentative> files, VoidVisitor<StatementProcessor> visitor, Map<CallableDeclaration<?>, DefinedFunction> methodMatcher) {
+    public FullAbstractingStatementProcessor(Map<String, Integer> tokenDictionary, DefinedFunction function, List<FileRepresentative> files, VoidVisitor<StatementProcessor> visitor, Map<CallableDeclaration<?>, DefinedFunction> methodMatcher, boolean assertMissingClasses) {
         super(tokenDictionary, function.getBody(), visitor);
 
         this.methodMatcher = methodMatcher;
         this.function = function;
         this.files = files;
+        this.assertMissingClasses = assertMissingClasses;
     }
 
     @Override
@@ -43,6 +45,8 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
     // Учитываем изменение значений только локальных переменных
     @Override
     public void process(AssignExpr assignExpr) {
+        System.out.println(assignExpr);
+
         boolean skip = true;
         VariableOrConst variable = null;
 
@@ -106,29 +110,35 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
     // PS: shortly - "int[] ar1, ar2[];" -> "int[] ar1; int[][] ar2;"
     @Override
     public void process(VariableDeclarationExpr variableDeclarationExpr) {
+        System.out.println("VAR DEC: " + variableDeclarationExpr);
 
         // var list
         boolean isNotFirst = false;
         for (VariableDeclarator var : variableDeclarationExpr.getVariables()) {
+            System.out.println(0);
             if (isNotFirst) {
                 addToken(SEMICOLON);
             } else {
                 isNotFirst = true;
             }
 
+            System.out.println(1);
             // modifiers
             //  PS: parser returns modifier with whitespace
             variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString().strip()));
 
+            System.out.println(2);
             // Type + id
             addTypeAsTokens(var.getType());
             addToken(var.getNameAsString());
 
+            System.out.println(3);
             // Find variable in structure
             VariableOrConst variable = EntitySearchers.findVariable(files, function,
                     var.getNameAsString(), false);
 
 
+            System.out.println(4);
             // initializer
             var.getInitializer().ifPresent(init -> {
                 addToken(ASSIGN);
@@ -138,6 +148,8 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                     return;
                 }
 
+                System.out.println(5);
+
                 try {
                     init.accept(new ExpressionModifierVisitor(files, function), null);
 
@@ -146,13 +158,22 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                         return;
                     }
 
+                    System.out.println(6);
+
                     newType.updateLink(function, files);
+
+                    System.out.println(7);
                     variable.setRealType(newType);
                 } catch (UnsupportedOperationException e) { // Не поддерживает конструкции - String[]::new
                     if (!e.getMessage().equals("com.github.javaparser.ast.type.ArrayType")) {
                         throw e;
                     }
                 } catch (UnsolvedSymbolException e) {
+                    System.out.println("Неизвестный класс: " + e.getName());
+                    if (!assertMissingClasses) {
+                        return;
+                    }
+
                     if (e.getCause() == null) {
                         // Откуда-то появились сторонние классы
                         if (EntitySearchers.findClass(files, function, e.getName()) == null) {
@@ -170,6 +191,11 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                     throw e;
                 } catch (RuntimeException e) {
                     if (checkMissingTypeInRuntimeException(e)) {
+                        System.out.println("Неизвестный класс: " + e.getMessage());
+                        if (!assertMissingClasses) {
+                            return;
+                        }
+
                         throw new MissingTypeException("Missing type in source code: " +
                                 getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
                     }
@@ -182,6 +208,8 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
 
     @Override
     public void process(ObjectCreationExpr objectCreationExpr) {
+        System.out.println(objectCreationExpr);
+
         // scope (never seen usage)
         objectCreationExpr.getScope().ifPresent(scope -> {
             scope.accept(visitor, this);
@@ -216,7 +244,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                     matchedFunc.actuateTypes(files);
 
                     if (!matchedFunc.isTokenized()) {
-                        FullAbstractingStatementProcessor processor = new FullAbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
+                        FullAbstractingStatementProcessor processor = new FullAbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher, false);
                         matchedFunc.addTokens(processor.run());
                     }
 
@@ -224,29 +252,36 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                 }
             });
         } catch (UnsolvedSymbolException e) {
+            System.out.println("Неизвестный класс: " + e.getName());
+            if (!assertMissingClasses) {
+                return;
+            }
+
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
                 if (EntitySearchers.findClass(files, function, e.getName()) == null) {
-                    //TODO: uncomment
-//                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
+                    throw new MissingTypeException("Missing type in source code: " + e.getName(), e);
                 }
             } else {
                 if (e.getCause() instanceof UnsolvedSymbolException &&
                         EntitySearchers.findClass(files, function,
                                 ((UnsolvedSymbolException) e.getCause()).getName()) == null) {
 
-                    //TODO: uncomment
-//                    throw new MissingTypeException("Missing type in source code: " +
-//                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
+                    throw new MissingTypeException("Missing type in source code: " +
+                            ((UnsolvedSymbolException) e.getCause()).getName(), e);
                 }
             }
 
-//            throw e;
+            throw e;
         } catch (RuntimeException e) {
             if (checkMissingTypeInRuntimeException(e)) {
-                //TODO: uncomment
-//                throw new MissingTypeException("Missing type in source code: " +
-//                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
+                System.out.println("Неизвестный класс: " + e.getMessage());
+                if (!assertMissingClasses) {
+                    return;
+                }
+
+                throw new MissingTypeException("Missing type in source code: " +
+                        getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
             }
 
             throw e;
@@ -255,6 +290,8 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
 
     @Override
     public void process(MethodCallExpr methodCallExpr) {
+        System.out.println(methodCallExpr);
+
         // scope
         methodCallExpr.getScope().ifPresent(scope -> {
             scope.accept(visitor, this);
@@ -298,7 +335,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                     matchedFunc.actuateTypes(files);
 
                     if (!matchedFunc.isTokenized()) {
-                        FullAbstractingStatementProcessor processor = new FullAbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher);
+                        FullAbstractingStatementProcessor processor = new FullAbstractingStatementProcessor(tokenDictionary, matchedFunc, files, new TokenizerVisitor(), methodMatcher, false);
                         matchedFunc.addTokens(processor.run());
                     }
 
@@ -306,6 +343,11 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                 }
             });
         } catch (UnsolvedSymbolException e) {
+            System.out.println("Неизвестный класс: " + e.getName());
+            if (!assertMissingClasses) {
+                return;
+            }
+
             if (e.getCause() == null) {
                 // Откуда-то появились сторонние классы
                 if (EntitySearchers.findClass(files, function, e.getName()) == null) {
@@ -322,6 +364,11 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
             throw e;
         } catch (RuntimeException e) {
             if (checkMissingTypeInRuntimeException(e)) {
+                System.out.println("Неизвестный класс: " + e.getMessage());
+                if (!assertMissingClasses) {
+                    return;
+                }
+
                 throw new MissingTypeException("Missing type in source code: " +
                         getNameOfInnerUnsolvedSymbolException(e.getCause()), e);
             }
@@ -338,7 +385,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
         if (e instanceof UnsolvedSymbolException) {
             UnsolvedSymbolException use = (UnsolvedSymbolException) e;
 
-            return EntitySearchers.findClass(files, function, use.getName()) == null;
+            return !assertMissingClasses || EntitySearchers.findClass(files, function, use.getName()) == null;
         } else {
             return checkMissingTypeInRuntimeException(e.getCause());
         }

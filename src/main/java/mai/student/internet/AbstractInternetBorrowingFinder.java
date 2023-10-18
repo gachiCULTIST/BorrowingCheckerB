@@ -23,6 +23,7 @@ public abstract class AbstractInternetBorrowingFinder<T extends File> implements
     public AbstractInternetBorrowingFinder(Path source, CodeLanguage lang, Function<Path, T> constructor){
         this.language = lang;
         this.constructor = constructor;
+        this.source = source;
         this.setFiles(source);
     }
 

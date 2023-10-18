@@ -11,6 +11,7 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.TruncatedChunkException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,7 +63,7 @@ public class GitHubRepoClient {
         }
     }
 
-    public byte[] getFullRepo(String owner, String repo) {
+    public byte[] getFullRepo(String owner, String repo, boolean repeated) {
         HttpGet get = new HttpGet(String.format(BASE_URL + "%s/%s/zipball", owner, repo));
 
         get.setHeader(HttpHeaders.ACCEPT, ConfigReader.getProperty("github.accept"));
@@ -91,8 +92,18 @@ public class GitHubRepoClient {
 
             throw new UnsupportedOperationException("Ответ пришел без тела, owner - " + owner + ", repo - " + repo
                     + ", code - " + response.getCode());
+        } catch (TruncatedChunkException ex) {
+            if (repeated) {
+                System.out.println(ex.getMessage());
+            }
+
+            return getFullRepo(owner, repo, true); // если не удалось нормально скачать - проводится еше попытка
         } catch (IOException ex) {
-            throw new RuntimeException("Во время отправки запроса возникла ошибка, owner - " + owner + ", repo - " + repo, ex);
+            if (repeated) {
+                throw new RuntimeException("Во время отправки запроса возникла ошибка, owner - " + owner + ", repo - " + repo, ex);
+            }
+
+            return getFullRepo(owner, repo, true); // если не удалось нормально скачать - проводится еше попытка
         }
     }
 }

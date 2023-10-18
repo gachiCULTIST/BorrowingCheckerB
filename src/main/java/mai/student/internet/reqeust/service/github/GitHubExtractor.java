@@ -51,7 +51,9 @@ public class GitHubExtractor {
     }
 
     public void extractRepo(String owner, String repo) {
-        byte[] bytes = client.getFullRepo(owner, repo);
+        clean(destination.toFile());
+
+        byte[] bytes = client.getFullRepo(owner, repo, false);
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
             byte[] buffer = new byte[1024];
 

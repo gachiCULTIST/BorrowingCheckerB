@@ -12,12 +12,17 @@ import java.util.logging.Level;
 public class ReducingCodeComparer extends AbstractCodeComparer {
 
     @Override
-    protected List<Integer> tokenizeOnSetUp(Path source) {
+    protected List<Integer> tokenizeOnSetUp(Path source, CodeLanguage lang) {
         AbstractTokenizer tokenizer;
-        CodeLanguage lang = UtilityClass.getLanguage(source);
+        if (lang == null) {
+            lang = UtilityClass.getLanguage(source);
+            if (lang == null) {
+                throw new UnsupportedOperationException("Language of the project is not defined!");
+            }
+        }
         switch (lang) {
             case Java:
-                tokenizer = new ReducingJavaTokenizer(source, lang);
+                tokenizer = new ReducingJavaTokenizer(source, lang, false);
                 break;
             case C:
                 LOGGER.log(Level.SEVERE, "Unsupported file extension: C/C++ is not supported yet!");

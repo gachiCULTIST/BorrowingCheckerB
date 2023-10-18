@@ -21,7 +21,11 @@ public class UtilityClass {
         if (Files.isDirectory(source)) {
             try (Stream<Path> insides = Files.list(source)) {
                 for (Path path : insides.collect(Collectors.toList())) {
-                    return getLanguage(path);
+                    CodeLanguage result = getLanguage(path);
+                    if (result == null) {
+                        continue;
+                    }
+                    return result;
                 }
             } catch (IOException e) {
                 throw new IllegalArgumentException("Wrong source path: " + source, e);
@@ -40,7 +44,7 @@ public class UtilityClass {
             }
         }
 
-        throw new UnsupportedOperationException("Not supported file type: " + source);
+        return null;
     }
 
     // Функция для проверка анализа программы

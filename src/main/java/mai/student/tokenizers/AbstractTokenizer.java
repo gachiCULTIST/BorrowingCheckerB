@@ -32,8 +32,10 @@ public abstract class AbstractTokenizer {
     protected List<FileRepresentative> files;
     protected Map<String, Integer> tokenMapping;
     protected List<Integer> result;
+    protected Path source;
 
     public AbstractTokenizer(Path source, CodeLanguage lang) {
+        this.source = source;
         language = lang;
 
         this.files = new ArrayList<>();

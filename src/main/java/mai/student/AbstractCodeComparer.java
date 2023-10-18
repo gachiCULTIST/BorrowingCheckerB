@@ -1,5 +1,6 @@
 package mai.student;
 
+import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.java17.ReducingJavaTokenizer;
 
 import java.nio.file.Path;
@@ -19,24 +20,32 @@ public abstract class AbstractCodeComparer implements CodeComparer {
     protected double result = -1;
 
     public void setFirstProgram(Path source) {
+        setFirstProgram(source, null);
+    }
+
+    public void setFirstProgram(Path source, CodeLanguage lang) {
         if (source == null || source.toString().isEmpty()) {
             throw new IllegalArgumentException("List of paths must not be null or empty!");
         }
 
         this.source1 = source;
-        this.code1Tokenized = tokenizeOnSetUp(source);
+        this.code1Tokenized = tokenizeOnSetUp(source, lang);
     }
 
     public void setSecondProgram(Path source) {
+        setSecondProgram(source, null);
+    }
+
+    public void setSecondProgram(Path source, CodeLanguage lang) {
         if (source == null || source.toString().isEmpty()) {
             throw new IllegalArgumentException("List of paths must not be null or empty!");
         }
 
         this.source2 = source;
-        this.code2Tokenized = tokenizeOnSetUp(source);
+        this.code2Tokenized = tokenizeOnSetUp(source, lang);
     }
 
-    protected abstract List<Integer> tokenizeOnSetUp(Path source);
+    protected abstract List<Integer> tokenizeOnSetUp(Path source, CodeLanguage lang);
 
     public void compare() {
         LOGGER.info("Comparing stage start: " + source1 + ", " + source2);

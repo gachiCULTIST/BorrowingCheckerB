@@ -9,6 +9,7 @@ import mai.student.tokenizers.java17.preprocessing.Preprocessor;
 import mai.student.tokenizers.java17.tokenization.FullAbstractingStatementProcessor;
 import mai.student.tokenizers.java17.tokenization.BasicStatementProcessor;
 import mai.student.tokenizers.java17.tokenization.TokenizerVisitor;
+import mai.student.utility.UtilityClass;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -20,8 +21,11 @@ import java.util.logging.Level;
 
 public class ReducingJavaTokenizer extends AbstractTokenizer {
 
-    public ReducingJavaTokenizer(Path source, CodeLanguage lang) {
+    protected final boolean assertMissingClasses;
+
+    public ReducingJavaTokenizer(Path source, CodeLanguage lang, boolean assertMissingClasses) {
         super(source, lang);
+        this.assertMissingClasses = assertMissingClasses;
         configureParser(source);
 
         InputStream resourceToLoad = CLASS_LOADER.getResourceAsStream(DEFAULT_DICTIONARY);
@@ -38,8 +42,9 @@ public class ReducingJavaTokenizer extends AbstractTokenizer {
         }
     }
 
-    public ReducingJavaTokenizer(Path source, CodeLanguage lang, String dictionary) {
+    public ReducingJavaTokenizer(Path source, CodeLanguage lang, String dictionary, boolean assertMissingClasses) {
         super(source, lang);
+        this.assertMissingClasses = assertMissingClasses;
         configureParser(source);
 
         try (Scanner scanner = new Scanner(new FileReader(dictionary))) {
@@ -81,10 +86,11 @@ public class ReducingJavaTokenizer extends AbstractTokenizer {
             LOGGER.log(Level.SEVERE, "Can't find main method");
             throw new NoStartPointException("Can't find main method");
         }
+//        normalizeSourceDir(getFileOfMain(mainFunc));
 
         LOGGER.info("Tokenizing started.");
         long start = timer.millis();
-        BasicStatementProcessor processor = new FullAbstractingStatementProcessor(tokenMapping, mainFunc, files, new TokenizerVisitor(), methodMatcher);
+        BasicStatementProcessor processor = new FullAbstractingStatementProcessor(tokenMapping, mainFunc, files, new TokenizerVisitor(), methodMatcher, this.assertMissingClasses);
         mainFunc.addTokens(processor.run());
         totalTokenizingTime += timer.millis() - start;
         result = mainFunc.tokens;
@@ -105,5 +111,41 @@ public class ReducingJavaTokenizer extends AbstractTokenizer {
             }
         }
         return null;
+    }
+
+    private void normalizeSourceDir(FileRepresentative file) {
+        if (file == null) {
+            return;
+        }
+
+        System.out.println(source);
+        System.out.println(file.getFilePath());
+
+        // Find largest common path
+        Path normalPath = file.getFilePath().subpath(0, file.getFilePath().getNameCount() - 1);
+
+        // Exclude package dirs
+        String[] packagePath = file.curPackage.getContent();
+        for (int i = packagePath.length - 1; i >= 0; --i) {
+            if (normalPath.endsWith(packagePath[i])) {
+                normalPath = normalPath.subpath(0, normalPath.getNameCount() - 1);
+            }
+        }
+
+        if (!normalPath.startsWith(this.source)) {
+            return;
+        }
+
+        LOGGER.info("Source path normalized: " + normalPath);
+        this.source = normalPath;
+        configureParser(normalPath);
+    }
+
+    private FileRepresentative getFileOfMain(IStructure elem) {
+        if (elem.getParent().getStrucType() == StructureType.File) {
+            return (FileRepresentative) elem.getParent();
+        }
+
+        return getFileOfMain(elem.getParent());
     }
 }

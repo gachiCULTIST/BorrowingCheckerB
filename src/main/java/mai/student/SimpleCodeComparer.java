@@ -13,13 +13,18 @@ import java.util.logging.Level;
 public class SimpleCodeComparer extends AbstractCodeComparer {
 
     @Override
-    protected List<Integer> tokenizeOnSetUp(Path source) {
+    protected List<Integer> tokenizeOnSetUp(Path source, CodeLanguage lang) {
         if (Files.notExists(source) && Files.isDirectory(source)) {
             throw new UnsupportedOperationException("Path must leads to existing file.");
         }
 
         AbstractTokenizer tokenizer;
-        CodeLanguage lang = UtilityClass.getLanguage(source);
+        if (lang == null) {
+            lang = UtilityClass.getLanguage(source);
+            if (lang == null) {
+                throw new UnsupportedOperationException("Language of the project is not defined!");
+            }
+        }
         switch (lang) {
             case Java:
                 tokenizer = new SimpleJavaTokenizer(source, lang);
