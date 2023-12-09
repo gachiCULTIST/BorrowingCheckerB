@@ -1,6 +1,6 @@
 package mai.student;
 
-import mai.student.tokenizers.java17.JavaTokenizer;
+import mai.student.tokenizers.java17.ReducingJavaTokenizer;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -16,7 +16,7 @@ public class CheckComparingResult {
 
     private static final String resourceMissingMessage = "Missing token dictionary: ";
     private static final String DEFAULT_THRESHOLDS = "thresholds.txt";
-    private static final ClassLoader cl = JavaTokenizer.class.getClassLoader();
+    private static final ClassLoader cl = ReducingJavaTokenizer.class.getClassLoader();
     private static final double DIVIDER = 1000;
 
     private double defaultThreshold = 0.2;

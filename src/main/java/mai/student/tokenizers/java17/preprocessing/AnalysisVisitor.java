@@ -250,8 +250,6 @@ public class AnalysisVisitor extends GenericListVisitorAdapter<IStructure, IStru
 
     @Override
     public List<IStructure> visit(MethodDeclaration declaration, IStructure arg) {
-        declaration.getBody().get();
-
         Type returnValue = fromParserToMyType(declaration.getType());
         ArrayList<VariableOrConst> variablesAndConsts = new ArrayList<>();
 

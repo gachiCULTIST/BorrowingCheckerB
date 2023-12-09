@@ -1,5 +1,6 @@
-package mai.student.tokenizers.java17;
+package mai.student.tokenizers.java17.tokenization;
 
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -9,6 +10,11 @@ public class TokenizerVisitor extends VoidVisitorAdapter<StatementProcessor> {
     // В реализации процессора будет экземпляр визитора
     // визитор просто вызывает соответствующий метод обработки
     // это позволяет реализации процессора самому решать идти вглубь по поддереву или нет
+
+    @Override
+    public void visit(EnumConstantDeclaration constantDeclaration, StatementProcessor processor) {
+        processor.process(constantDeclaration);
+    }
 
     // []
     @Override

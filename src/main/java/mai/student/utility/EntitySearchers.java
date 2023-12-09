@@ -13,12 +13,14 @@ public class EntitySearchers {
 
     // For all classes
     public static DefinedClass findClass(List<FileRepresentative> files, IStructure searchOrigin, Type target) {
+        System.out.println("find class 0");
         if (files == null || target == null) {
             return null;
         }
 
         // Qualified
         if (target.getQualifier().isPresent()) {
+            System.out.println("find class 1");
             return findQualifiedClass(files, target);
         }
 
@@ -26,17 +28,22 @@ public class EntitySearchers {
         if (searchOrigin == null) {
             return null;
         }
+
+        System.out.println("find class 2");
         return findNonQualifiedClass(files, searchOrigin, target);
     }
 
     // For qualified class
     public static DefinedClass findQualifiedClass(List<FileRepresentative> files, Type target) {
+        System.out.println("find qualified 0");
+
         if (files == null || target == null || target.getQualifier().isEmpty()) {
             return null;
         }
 
         Qualifier qualifier = target.getQualifier().get();
 
+        System.out.println("find qualified 1");
         for (FileRepresentative file : files) {
             if (!qualifier.startsWith(file.curPackage)) {
                 continue;
@@ -54,24 +61,32 @@ public class EntitySearchers {
             }
 
 
+            System.out.println("find qualified 2");
             // For nested classes
             DefinedClass result = null;
             int i = file.curPackage.getLength();
 
             // Get first entity
             while (i < qualifier.getLength()) {
+                System.out.println("find qualified 2_1");
+                System.out.println(file.classes.size());
                 for (DefinedClass innerClass : file.classes) {
+                    System.out.println("find qualified 2_2    " + innerClass.getName() + "   " + innerClass);
                     if (innerClass.getName().equals(qualifier.getContent()[i])) {
                         result = innerClass;
                         ++i;
+                        System.out.println("find qualified 2_3");
                         break;
                     }
                 }
+                break;
+//                System.out.println("find qualified 2_4");
             }
             if (result == null) {
                 continue;
             }
 
+            System.out.println("find qualified 3");
             // Moving pointer to the end
             for (; i < qualifier.getLength(); ++i) {
                 boolean changed = false; // observe result shifting
@@ -93,6 +108,7 @@ public class EntitySearchers {
                 continue;
             }
 
+            System.out.println("find qualified 4");
             // Get result from qualifier
             for (DefinedClass innerClass : result.innerClasses) {
                 if (innerClass.getName().equals(target.getName())) {

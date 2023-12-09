@@ -1,4 +1,4 @@
-package mai.student.tokenizers.java17;
+package mai.student.tokenizers.java17.tokenization;
 
 public class MissingTypeException extends RuntimeException {
 
