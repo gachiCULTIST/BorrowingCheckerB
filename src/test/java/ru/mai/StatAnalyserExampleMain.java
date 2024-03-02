@@ -1,12 +1,10 @@
 package ru.mai;
 
 import com.github.javaparser.ParseProblemException;
-import mai.student.CodeComparer;
-import mai.student.tokenizers.java17.JavaTokenizer;
-import mai.student.tokenizers.java17.MissingTypeException;
+import mai.student.ReducingCodeComparer;
+import mai.student.tokenizers.java17.tokenization.MissingTypeException;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.*;
 
 public class StatAnalyserExampleMain {
@@ -91,7 +89,7 @@ public class StatAnalyserExampleMain {
         if (dir.isDirectory()) {
             try {
 //                FileHandler fh = new FileHandler("CodeComparerLogger.txt", LOG_FILE_SIZE, 5, true);
-                CodeComparer.setLoggerHandler(null);
+                ReducingCodeComparer.setLoggerHandler(null);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
@@ -154,7 +152,7 @@ public class StatAnalyserExampleMain {
 
                     System.out.println(name1 + name2 + "\n" + assignment1);
                     try {
-                        CodeComparer codeComparer = new CodeComparer();
+                        ReducingCodeComparer codeComparer = new ReducingCodeComparer();
                         codeComparer.setFirstProgram(f1.toPath());
                         codeComparer.setSecondProgram(f2.toPath());
 //                        System.out.println("!!!! TIME\n\tPreprocessing: " + JavaTokenizer.totalPreprocessingTime +

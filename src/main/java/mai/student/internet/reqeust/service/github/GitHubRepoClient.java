@@ -1,8 +1,11 @@
 package mai.student.internet.reqeust.service.github;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.io.CharStreams;
+import com.google.common.net.MediaType;
 import mai.student.internet.reqeust.service.github.dto.RepoFileResponse;
+import mai.student.tokenizers.java17.tokenization.UrlChineseException;
 import mai.student.utility.ConfigReader;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -17,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
@@ -29,7 +33,17 @@ public class GitHubRepoClient {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public RepoFileResponse getFile(String owner, String repo, Path path) {
-        HttpGet get = new HttpGet(String.format(BASE_URL + "%s/%s/contents/%s", owner, repo, path.toString().replace("\\", "/")));
+        String url = String.format(BASE_URL + "%s/%s/contents/%s",
+                URLEncoder.encode(owner, StandardCharsets.UTF_8),
+                URLEncoder.encode(repo, StandardCharsets.UTF_8),
+                URLEncoder.encode(path.toString(), StandardCharsets.UTF_8).replaceAll("%5C", "/").replaceAll("\\+", " "));
+        HttpGet get = null;
+
+        try {
+            get = new HttpGet(url);
+        } catch (IllegalArgumentException ex) {
+            throw new UrlChineseException("Illegal url: " + url, ex);
+        }
 
         get.setHeader(HttpHeaders.ACCEPT, ConfigReader.getProperty("github.accept"));
         get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN);
@@ -42,7 +56,14 @@ public class GitHubRepoClient {
             if (entity != null) {
                 try (InputStream input = entity.getContent()) {
                     if (response.getCode() == HttpStatus.SC_OK) {
-                        return mapper.readValue(input, RepoFileResponse.class);
+                        try {
+                            return mapper.readValue(input, RepoFileResponse.class);
+                        } catch (MismatchedInputException ex) {
+                            String body = CharStreams.toString(new InputStreamReader(input, StandardCharsets.UTF_8));
+                            throw new ResponseException("Не успешный запрос, owner - " + owner + ", repo - " + repo
+                                    + ", path - " + path + ", code - " + response.getCode(), get.getUri(), response.getCode(),
+                                    body);
+                        }
                     }
 
                     String errorBody = CharStreams.toString(new InputStreamReader(input, StandardCharsets.UTF_8));

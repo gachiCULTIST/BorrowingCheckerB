@@ -19,8 +19,6 @@ public class NameAbstractingStatementProcessor extends BasicStatementProcessor {
 
     @Override
     protected void addToken(String lexeme) {
-        System.out.println("TOKEN: " + lexeme);
-
         if (tokenDictionary.containsKey(lexeme)) {
             result.add(tokenDictionary.get(lexeme));
             return;

@@ -45,8 +45,6 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
     // Учитываем изменение значений только локальных переменных
     @Override
     public void process(AssignExpr assignExpr) {
-        System.out.println(assignExpr);
-
         boolean skip = true;
         VariableOrConst variable = null;
 
@@ -110,35 +108,28 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
     // PS: shortly - "int[] ar1, ar2[];" -> "int[] ar1; int[][] ar2;"
     @Override
     public void process(VariableDeclarationExpr variableDeclarationExpr) {
-        System.out.println("VAR DEC: " + variableDeclarationExpr);
-
         // var list
         boolean isNotFirst = false;
         for (VariableDeclarator var : variableDeclarationExpr.getVariables()) {
-            System.out.println(0);
             if (isNotFirst) {
                 addToken(SEMICOLON);
             } else {
                 isNotFirst = true;
             }
 
-            System.out.println(1);
             // modifiers
             //  PS: parser returns modifier with whitespace
             variableDeclarationExpr.getModifiers().forEach(modifier -> addToken(modifier.toString().strip()));
 
-            System.out.println(2);
             // Type + id
             addTypeAsTokens(var.getType());
             addToken(var.getNameAsString());
 
-            System.out.println(3);
             // Find variable in structure
             VariableOrConst variable = EntitySearchers.findVariable(files, function,
                     var.getNameAsString(), false);
 
 
-            System.out.println(4);
             // initializer
             var.getInitializer().ifPresent(init -> {
                 addToken(ASSIGN);
@@ -148,7 +139,6 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                     return;
                 }
 
-                System.out.println(5);
 
                 try {
                     init.accept(new ExpressionModifierVisitor(files, function), null);
@@ -158,11 +148,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                         return;
                     }
 
-                    System.out.println(6);
-
                     newType.updateLink(function, files);
-
-                    System.out.println(7);
                     variable.setRealType(newType);
                 } catch (UnsupportedOperationException e) { // Не поддерживает конструкции - String[]::new
                     if (!e.getMessage().equals("com.github.javaparser.ast.type.ArrayType")) {
@@ -208,8 +194,6 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
 
     @Override
     public void process(ObjectCreationExpr objectCreationExpr) {
-        System.out.println(objectCreationExpr);
-
         // scope (never seen usage)
         objectCreationExpr.getScope().ifPresent(scope -> {
             scope.accept(visitor, this);
@@ -290,8 +274,6 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
 
     @Override
     public void process(MethodCallExpr methodCallExpr) {
-        System.out.println(methodCallExpr);
-
         // scope
         methodCallExpr.getScope().ifPresent(scope -> {
             scope.accept(visitor, this);

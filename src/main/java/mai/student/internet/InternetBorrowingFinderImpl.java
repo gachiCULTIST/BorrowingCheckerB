@@ -29,6 +29,7 @@ import mai.student.internet.reqeust.service.github.dto.CodeSearchResponse;
 import mai.student.internet.reqeust.service.github.dto.enums.QueryLanguages;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.NoStartPointException;
+import mai.student.tokenizers.java17.tokenization.UrlChineseException;
 import mai.student.utility.ConfigReader;
 import mai.student.utility.UtilityClass;
 import org.apache.hc.core5.http.HttpStatus;
@@ -67,7 +68,9 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
         for (FileWithSourceRating file : files) {
 
             List<String> queries = divider.divide(file);
+            System.out.println("QUERIES amount: " + queries.size());
             List<CodeSearchResponse> responses = queries.stream().map(q -> sendRequest("\"" + q + "\"")).filter(Objects::nonNull).collect(Collectors.toList());
+            System.out.println("ALL items: " + (Integer) responses.stream().map(CodeSearchResponse::getItems).mapToInt(List::size).sum());
 
             List<CodeSearchResponse.Item> semitarget = responses.stream().map(CodeSearchResponse::getItems)
                     .reduce(new ArrayList<>(), (a, b) -> {
@@ -77,12 +80,15 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
                         a.addAll(b);
                         return a;
                     });
+            System.out.println("Unique items: " + semitarget.size());
 
             FileStatisticCollector fileStatisticCollector = new FileStatisticCollector();
             semitarget.forEach(fileStatisticCollector::process);
             file.addStats(fileStatisticCollector.getResult());
+            System.out.println("Unique file pathes: " + fileStatisticCollector.getResult().size());
 
             semitarget.forEach(repoStatisticCollector::process);
+            System.out.println("Unique repos: " + fileStatisticCollector.getResult().size());
 
             searchResult.put(file, semitarget);
         }
@@ -95,15 +101,15 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
 
             List<SourceStatistic> reposStatistic = new ArrayList<>(repoStatisticCollector.getResult());
             reposStatistic.sort(new SourceStatisticComparator());
-            for (int i = 0; i < ANALYSING_AMOUNT; ++i) {
-                try {
-                    hardWay(codeComparer, reposStatistic.get(i), lang);
-                } catch (NoStartPointException | ParseProblemException ex) {
-                    System.out.println(ex.getMessage());
-                    ex.printStackTrace();
-                    // TODO: log
-                }
-            }
+//            for (int i = 0; i < ANALYSING_AMOUNT && i < reposStatistic.size(); ++i) {
+//                try {
+//                    hardWay(codeComparer, reposStatistic.get(i), lang);
+//                } catch (NoStartPointException | ParseProblemException ex) {
+//                    System.out.println(ex.getMessage());
+//                    ex.printStackTrace();
+//                    // TODO: log
+//                }
+//            }
         } catch (NoStartPointException ex) {
             System.out.println("Не удалось пройти сложный путь");
             // TODO: log
@@ -127,14 +133,19 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
         SimpleCodeComparer codeComparer = new SimpleCodeComparer();
         codeComparer.setFirstProgram(file.getFilePath());
 
-        for (int i = 0; i < ANALYSING_AMOUNT; ++i) {
+        for (int i = 0; i < ANALYSING_AMOUNT && i < file.getStats().size(); ++i) {
             SourceStatistic statistic = file.getStats().get(i);
             if (statistic == null) {
                 break;
             }
 
             CodeSearchResponse.Item target = sources.stream().filter(s -> s.extractFileUrl().equals(statistic.getSourceUrl())).findFirst().orElseThrow();
-            extractor.extractFile(target.getRepository().getOwner().getLogin(), target.getRepository().getName(), target.getPath());
+            try {
+                extractor.extractFile(target.getRepository().getOwner().getLogin(), target.getRepository().getName(), target.getPath());
+            } catch (UrlChineseException ex) {
+                continue;
+                // TODO: log
+            }
 
             try {
                 codeComparer.setSecondProgram(Path.of(extractor.getDestination().toString(), target.getName()));
@@ -143,7 +154,7 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
                 result.add(new InternetSearchResult().setTarget(file.getFilePath())
                         .setSource(target.getHtmlUrl())
                         .setOriginality(codeComparer.getResult()));
-            } catch (ParseProblemException ex) {
+            } catch (ParseProblemException | UnsupportedOperationException ex) {
                 // TODO: log
             }
         }
