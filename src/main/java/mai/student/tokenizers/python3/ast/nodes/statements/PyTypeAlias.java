@@ -6,7 +6,7 @@ import lombok.Setter;
 import mai.student.tokenizers.python3.ast.nodes.PyNode;
 import mai.student.tokenizers.python3.ast.nodes.types.PyTypeParameter;
 import mai.student.tokenizers.python3.ast.nodes.variables.PyName;
-import mai.student.tokenizers.python3.ast.visitors.VoidVisitor;
+import mai.student.tokenizers.python3.ast.visitors.PyVoidVisitor;
 
 import java.util.List;
 
@@ -20,7 +20,7 @@ public class PyTypeAlias extends PyStatement {
     private PyNode value;
 
     @Override
-    public <A> void accept(VoidVisitor<A> v, A arg) {
-
+    public <A> void accept(PyVoidVisitor<A> v, A arg) {
+        v.visit(this, arg);
     }
 }

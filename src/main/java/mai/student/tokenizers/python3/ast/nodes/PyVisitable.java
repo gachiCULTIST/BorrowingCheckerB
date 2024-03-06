@@ -1,8 +1,8 @@
 package mai.student.tokenizers.python3.ast.nodes;
 
-import mai.student.tokenizers.python3.ast.visitors.VoidVisitor;
+import mai.student.tokenizers.python3.ast.visitors.PyVoidVisitor;
 
 public interface PyVisitable {
 
-    <A> void accept(VoidVisitor<A> v, A arg);
+    <A> void accept(PyVoidVisitor<A> v, A arg);
 }

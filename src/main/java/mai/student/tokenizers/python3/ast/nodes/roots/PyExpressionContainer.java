@@ -2,17 +2,17 @@ package mai.student.tokenizers.python3.ast.nodes.roots;
 
 import lombok.Getter;
 import lombok.Setter;
-import mai.student.tokenizers.python3.ast.nodes.expressions.PyExpression;
-import mai.student.tokenizers.python3.ast.visitors.VoidVisitor;
+import mai.student.tokenizers.python3.ast.nodes.PyNode;
+import mai.student.tokenizers.python3.ast.visitors.PyVoidVisitor;
 
 @Getter
 @Setter
 public class PyExpressionContainer extends PyRoot {
 
-    private PyExpression body;
+    private PyNode body;
 
     @Override
-    public <A> void accept(VoidVisitor<A> v, A arg) {
-
+    public <A> void accept(PyVoidVisitor<A> v, A arg) {
+        v.visit(this, arg);
     }
 }

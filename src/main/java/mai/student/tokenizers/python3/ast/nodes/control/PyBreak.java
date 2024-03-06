@@ -1,10 +1,10 @@
 package mai.student.tokenizers.python3.ast.nodes.control;
 
-import mai.student.tokenizers.python3.ast.visitors.VoidVisitor;
+import mai.student.tokenizers.python3.ast.visitors.PyVoidVisitor;
 
 public class PyBreak extends PyControl {
     @Override
-    public <A> void accept(VoidVisitor<A> v, A arg) {
-
+    public <A> void accept(PyVoidVisitor<A> v, A arg) {
+        v.visit(this, arg);
     }
 }
