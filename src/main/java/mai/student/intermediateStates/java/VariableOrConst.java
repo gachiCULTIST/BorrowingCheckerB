@@ -1,21 +1,23 @@
-package mai.student.intermediateStates;
+package mai.student.intermediateStates.java;
 
 import com.github.javaparser.Position;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
+import mai.student.intermediateStates.IStructure;
+import mai.student.intermediateStates.StructureType;
 
 import java.util.List;
 import java.util.Objects;
 
 // Класс для представления переменных и констант
-public class VariableOrConst implements IStructure {
+public class VariableOrConst implements IStructure<FileRepresentative> {
 
     private static final String TYPE_ARRAY = "Array";
 
     private final Type type;
     private Type realType = null;
     private final String identifier;
-    public IStructure parent;
+    public IStructure<FileRepresentative> parent;
 
 
     // For Parser
@@ -23,7 +25,7 @@ public class VariableOrConst implements IStructure {
     private boolean isLinked = false;
     private ObjectCreationExpr replacer = null;
 
-    public VariableOrConst(Type type, String identifier, IStructure parent, Position position) {
+    public VariableOrConst(Type type, String identifier, IStructure<FileRepresentative> parent, Position position) {
         this.type = type;
         this.identifier = identifier;
         this.parent = parent;
@@ -68,7 +70,7 @@ public class VariableOrConst implements IStructure {
     }
 
     @Override
-    public IStructure getParent() {
+    public IStructure<FileRepresentative> getParent() {
         return parent;
     }
 

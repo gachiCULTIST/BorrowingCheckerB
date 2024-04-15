@@ -1,9 +1,9 @@
 package mai.student.tokenizers.python3.ast.nodes.operator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 public class RShift extends Operator {
 
-    @JsonIgnore
-    public static final Instance OP = Instance.R_SHIFT;
+    @Override
+    public Instance getSelfOps() {
+        return Instance.R_SHIFT;
+    }
 }

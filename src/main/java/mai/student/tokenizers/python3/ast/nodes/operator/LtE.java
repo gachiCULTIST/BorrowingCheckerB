@@ -1,9 +1,9 @@
 package mai.student.tokenizers.python3.ast.nodes.operator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 public class LtE extends Operator {
 
-    @JsonIgnore
-    public static final Instance OP = Instance.LT_E;
+    @Override
+    public Instance getSelfOps() {
+        return Instance.LT_E;
+    }
 }

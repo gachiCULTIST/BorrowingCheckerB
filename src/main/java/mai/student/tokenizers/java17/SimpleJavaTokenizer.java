@@ -4,7 +4,6 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import mai.student.internet.handler.java.filter.DeleteImportFilter;
 import mai.student.internet.handler.java.filter.DeletePackageFilter;
-import mai.student.tokenizers.AbstractTokenizer;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.java17.tokenization.BasicStatementProcessor;
 import mai.student.tokenizers.java17.tokenization.NameAbstractingStatementProcessor;
@@ -17,7 +16,7 @@ import java.nio.file.Path;
 import java.util.Scanner;
 import java.util.logging.Level;
 
-public class SimpleJavaTokenizer extends AbstractTokenizer {
+public class SimpleJavaTokenizer extends AbstractJavaTokenizer {
 
 
     public SimpleJavaTokenizer(Path source, CodeLanguage lang) {

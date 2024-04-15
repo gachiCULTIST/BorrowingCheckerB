@@ -6,7 +6,6 @@ import mai.student.internet.common.stats.FileStatisticExtractable;
 import mai.student.internet.common.stats.RepoStatisticExtractable;
 
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.List;
 
 @Getter
@@ -21,7 +20,7 @@ public class CodeSearchResponse {
     @Getter
     public static class Item implements FileStatisticExtractable, RepoStatisticExtractable {
         private String name;
-        private Path path;
+        private String path;
         private String sha;
         private URL url;
         @JsonProperty("git_url")

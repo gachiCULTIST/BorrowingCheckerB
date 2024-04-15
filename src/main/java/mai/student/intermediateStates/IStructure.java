@@ -2,16 +2,16 @@ package mai.student.intermediateStates;
 
 import java.util.List;
 
-public interface IStructure {
+public interface IStructure<T> {
     String getName();
 
     StructureType getStrucType();
 
-    default IStructure getParent() {
+    default IStructure<T> getParent() {
         return null;
     }
 
-    default void actuateTypes(List<FileRepresentative> files) {
+    default void actuateTypes(List<T> files) {
     }
 
     default boolean isLinked() {

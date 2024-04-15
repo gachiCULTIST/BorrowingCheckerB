@@ -1,13 +1,15 @@
-package mai.student.intermediateStates;
+package mai.student.intermediateStates.java;
 
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import mai.student.intermediateStates.IStructure;
+import mai.student.intermediateStates.StructureType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 // Класс для представления классов сравниваемых программ и интерфейсов
-public class DefinedClass implements IStructure {
+public class DefinedClass implements IStructure<FileRepresentative> {
 
     private final String className;
 
@@ -23,10 +25,10 @@ public class DefinedClass implements IStructure {
 
     private Type[] params;
 
-    public IStructure parent;
+    public IStructure<FileRepresentative> parent;
 
     // For Parser
-    public DefinedClass(String className, Type[] params, List<Type> inheritanceList, IStructure parent) {
+    public DefinedClass(String className, Type[] params, List<Type> inheritanceList, IStructure<FileRepresentative> parent) {
         this.className = className;
         this.inheritanceList = inheritanceList != null ? inheritanceList : new ArrayList<>();
         this.parent = parent;
@@ -52,7 +54,7 @@ public class DefinedClass implements IStructure {
     }
 
     @Override
-    public IStructure getParent() {
+    public IStructure<FileRepresentative> getParent() {
         return parent;
     }
 

@@ -2,14 +2,15 @@ package mai.student.tokenizers.java17;
 
 import com.github.javaparser.ast.body.CallableDeclaration;
 import mai.student.intermediateStates.*;
-import mai.student.tokenizers.AbstractTokenizer;
+import mai.student.intermediateStates.java.DefinedClass;
+import mai.student.intermediateStates.java.DefinedFunction;
+import mai.student.intermediateStates.java.FileRepresentative;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.NoStartPointException;
 import mai.student.tokenizers.java17.preprocessing.Preprocessor;
 import mai.student.tokenizers.java17.tokenization.FullAbstractingStatementProcessor;
 import mai.student.tokenizers.java17.tokenization.BasicStatementProcessor;
 import mai.student.tokenizers.java17.tokenization.TokenizerVisitor;
-import mai.student.utility.UtilityClass;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -19,7 +20,7 @@ import java.time.Clock;
 import java.util.*;
 import java.util.logging.Level;
 
-public class ReducingJavaTokenizer extends AbstractTokenizer {
+public class ReducingJavaTokenizer extends AbstractJavaTokenizer {
 
     protected final boolean assertMissingClasses;
 
@@ -141,7 +142,7 @@ public class ReducingJavaTokenizer extends AbstractTokenizer {
         configureParser(normalPath);
     }
 
-    private FileRepresentative getFileOfMain(IStructure elem) {
+    private FileRepresentative getFileOfMain(IStructure<FileRepresentative> elem) {
         if (elem.getParent().getStrucType() == StructureType.File) {
             return (FileRepresentative) elem.getParent();
         }

@@ -1,3 +1,4 @@
+import json
 import sys
 import ast2json
 import os
@@ -38,5 +39,7 @@ if __name__ == '__main__':
 
     files = traverse(path)
 
-    result = '[\n' + ',\n'.join(list(map(str, map(lambda f: {"path": f["path"], "ast": ast2json.str2json(f["text"])}, files)))) + '\n]'
+    result = '[\n' + ',\n'.join(list(map(json.dumps, map(
+        lambda f: {"path": f["path"], "ast": ast2json.str2json(f["text"])}, files)))) + '\n]'
     print(result)
+    exit(0)

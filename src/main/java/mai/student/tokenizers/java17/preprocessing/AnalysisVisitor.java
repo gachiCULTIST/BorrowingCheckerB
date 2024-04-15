@@ -12,7 +12,8 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
 import com.github.javaparser.ast.visitor.GenericListVisitorAdapter;
 import mai.student.intermediateStates.*;
-import mai.student.intermediateStates.Package;
+import mai.student.intermediateStates.java.*;
+import mai.student.intermediateStates.java.Package;
 
 import java.util.*;
 

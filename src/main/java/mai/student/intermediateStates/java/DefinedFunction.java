@@ -1,14 +1,16 @@
-package mai.student.intermediateStates;
+package mai.student.intermediateStates.java;
 
 import com.github.javaparser.ast.body.CallableDeclaration;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import mai.student.intermediateStates.IStructure;
+import mai.student.intermediateStates.StructureType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 // Класс для представления функций
-public class DefinedFunction implements IStructure {
+public class DefinedFunction implements IStructure<FileRepresentative> {
 
     private final String funcName;
     private final Type[] argTypes;
@@ -100,7 +102,7 @@ public class DefinedFunction implements IStructure {
     }
 
     @Override
-    public IStructure getParent() {
+    public IStructure<FileRepresentative> getParent() {
         return parent;
     }
 

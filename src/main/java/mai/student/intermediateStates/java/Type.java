@@ -1,8 +1,9 @@
-package mai.student.intermediateStates;
+package mai.student.intermediateStates.java;
 
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import mai.student.intermediateStates.IStructure;
 import mai.student.utility.EntitySearchers;
 
 import java.util.ArrayList;

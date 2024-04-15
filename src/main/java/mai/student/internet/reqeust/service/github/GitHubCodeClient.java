@@ -14,11 +14,10 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.NameValuePair;
 import org.apache.hc.core5.net.URIBuilder;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -30,13 +29,21 @@ public class GitHubCodeClient {
 
 //    public final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public CodeSearchResponse get(List<NameValuePair> request) {
+    public CodeSearchResponse get(List<NameValuePair> request, boolean repeatAnotherWay) {
         HttpGet get = new HttpGet(URL);
 
         URI uri;
         try {
             uri = new URIBuilder(get.getUri()).addParameters(request)
                     .build();
+            if (!repeatAnotherWay) {
+                uri = new URIBuilder(get.getUri()).setCustomQuery(uri.getQuery().replaceAll("%7B", "{").replaceAll("%7D", "}")
+                                .replaceAll("%5B", "[").replaceAll("%5D", "]")
+                                .replaceAll("%28", "(").replaceAll("%29", ")"))
+                        .build();
+            }
+
+            System.out.println(uri); // TODO: log
             get.setUri(uri);
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Что-то пошло не так", ex);

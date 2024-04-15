@@ -5,7 +5,6 @@ import lombok.Getter;
 import mai.student.internet.reqeust.service.github.dto.enums.RepoType;
 
 import java.net.URL;
-import java.nio.file.Path;
 
 @Getter
 public class RepoFileResponse {
@@ -14,7 +13,7 @@ public class RepoFileResponse {
     private String encoding;
     private long size;
     private String name;
-    private Path path;
+    private String path;
     private String content;
     private String sha;
     private URL url;

@@ -10,14 +10,13 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import mai.student.CodeComparer;
 import mai.student.ReducingCodeComparer;
 import mai.student.SimpleCodeComparer;
-import mai.student.internet.AbstractInternetBorrowingFinder;
-import mai.student.internet.InternetSearchResult;
 import mai.student.internet.common.FileWithSourceRating;
 import mai.student.internet.common.stats.SourceStatistic;
 import mai.student.internet.common.stats.SourceStatisticComparator;
 import mai.student.internet.common.stats.collector.FileStatisticCollector;
 import mai.student.internet.common.stats.collector.RepoStatisticCollector;
 import mai.student.internet.handler.java.divider.AbstractJavaDivider;
+import mai.student.internet.handler.java.divider.JavaLimitDivider;
 import mai.student.internet.handler.java.divider.JavaLineDivider;
 import mai.student.internet.handler.java.filter.DeleteImportFilter;
 import mai.student.internet.handler.java.filter.DeletePackageFilter;
@@ -42,9 +41,12 @@ import java.util.stream.Collectors;
 
 public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder<FileWithSourceRating> {
 
-    private final int ANALYSING_AMOUNT = Integer.parseInt(ConfigReader.getProperty("finder.source.amount"));
+    private static final String NOT_PARSABLE_MESSAGE = "ERROR_TYPE_QUERY_PARSING_FATAL unable to parse query!";
+    private static final int ANALYSING_AMOUNT = Integer.parseInt(ConfigReader.getProperty("finder.source.amount"));
+    private static final int WAIT_TIMEOUT = 60000;
+
     private final GitHubCodeClient client = new GitHubCodeClient();
-    private final AbstractJavaDivider divider = new JavaLineDivider();
+    private final AbstractJavaDivider divider = new JavaLimitDivider();
     private final GitHubExtractor extractor = new GitHubExtractor();
     private List<InternetSearchResult> result;
 
@@ -69,7 +71,7 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
 
             List<String> queries = divider.divide(file);
             System.out.println("QUERIES amount: " + queries.size());
-            List<CodeSearchResponse> responses = queries.stream().map(q -> sendRequest("\"" + q + "\"")).filter(Objects::nonNull).collect(Collectors.toList());
+            List<CodeSearchResponse> responses = queries.stream().map(q -> sendRequest(q, false)).filter(Objects::nonNull).collect(Collectors.toList());
             System.out.println("ALL items: " + (Integer) responses.stream().map(CodeSearchResponse::getItems).mapToInt(List::size).sum());
 
             List<CodeSearchResponse.Item> semitarget = responses.stream().map(CodeSearchResponse::getItems)
@@ -160,7 +162,8 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
         }
     }
 
-    private CodeSearchResponse sendRequest(String query) {
+    private CodeSearchResponse sendRequest(String query, boolean repeatAnotherWay) {
+        System.out.println(query);
         List<NameValuePair> request = new CodeSearchRequestBuilder()
                 .setQueryLanguage(QueryLanguages.JAVA)
                 .setQueryContent(query)
@@ -168,10 +171,12 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
 
         CodeSearchResponse response;
         try {
-            response = client.get(request);
+            response = client.get(request, repeatAnotherWay);
         } catch (ResponseException ex) {
-
-            ex.printStackTrace();
+            if (ex.getCode() == HttpStatus.SC_UNPROCESSABLE_ENTITY && ex.getResponseBody().contains(NOT_PARSABLE_MESSAGE)
+                    && !repeatAnotherWay) {
+                return sendRequest("\"" + query + "\"", true);
+            }
 
             if (ex.getCode() != HttpStatus.SC_FORBIDDEN) {
                 System.out.println(ex.getUri().toString());
@@ -179,8 +184,8 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
             }
 
             try {
-                Thread.sleep(60000);
-                return sendRequest(query);
+                Thread.sleep(WAIT_TIMEOUT);
+                return sendRequest(query, repeatAnotherWay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 throw new RuntimeException("Не удалось поспать во время отправки запросов", e);

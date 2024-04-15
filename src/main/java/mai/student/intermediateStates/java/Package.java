@@ -1,4 +1,4 @@
-package mai.student.intermediateStates;
+package mai.student.intermediateStates.java;
 
 import com.github.javaparser.ast.expr.Name;
 

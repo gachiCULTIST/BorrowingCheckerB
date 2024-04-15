@@ -10,6 +10,8 @@ import mai.student.internet.reqeust.service.github.dto.enums.SortTypes;
 import org.apache.hc.core5.http.NameValuePair;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +19,9 @@ import java.util.List;
 @Setter
 @Accessors(chain = true)
 public class CodeSearchRequestBuilder {
+
+    public static final int QUERY_LENGTH_LIMIT = 1000;
+    public static final int JAVA_LANG_EXTRA_SYMBOLS = 2; // для расчета остатка от лимита на сам запрос
 
     private QueryLanguages queryLanguage;
     private String queryContent;
@@ -31,7 +36,7 @@ public class CodeSearchRequestBuilder {
 
         StringBuilder query = new StringBuilder();
         if (this.queryLanguage != null) {
-            query.append(QueryParams.LANGUAGE.getName())
+            query.append(QueryParams.LANGUAGE.getName().toLowerCase())
                     .append(":")
                     .append(queryLanguage.getName())
                     .append(" ");

@@ -4,6 +4,8 @@ import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import mai.student.intermediateStates.*;
+import mai.student.intermediateStates.java.FileRepresentative;
+import mai.student.intermediateStates.java.VariableOrConst;
 import mai.student.utility.EntitySearchers;
 
 import java.util.List;

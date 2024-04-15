@@ -1,11 +1,14 @@
-package mai.student.intermediateStates;
+package mai.student.intermediateStates.java;
+
+import mai.student.intermediateStates.IStructure;
+import mai.student.intermediateStates.StructureType;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 // Класс для представления файлов с исходным кодом
-public class FileRepresentative implements IStructure {
+public class FileRepresentative implements IStructure<FileRepresentative> {
 
     private final Path filePath;
 

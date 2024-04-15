@@ -26,7 +26,7 @@ import mai.student.tokenizers.python3.ast.nodes.types.PyTypeVarTuple;
 import mai.student.tokenizers.python3.ast.nodes.variables.PyName;
 import mai.student.tokenizers.python3.ast.nodes.variables.PyStarred;
 
-public class AbstractPyVoidVisitor<T> implements PyVoidVisitor<T> {
+public abstract class AbstractPyVoidVisitor<T> implements PyVoidVisitor<T> {
 
     @Override
     public void visit(PyAsyncFor element, T arg) {
@@ -114,8 +114,8 @@ public class AbstractPyVoidVisitor<T> implements PyVoidVisitor<T> {
 
     @Override
     public void visit(PyExceptHandler element, T arg) {
-        if (element.getType() != null) {
-            element.getType().accept(this, arg);
+        if (element.getExcType() != null) {
+            element.getExcType().accept(this, arg);
         }
         if (element.getBody() != null) {
             element.getBody().forEach(s -> s.accept(this, arg));
@@ -376,6 +376,12 @@ public class AbstractPyVoidVisitor<T> implements PyVoidVisitor<T> {
     @Override
     public void visit(PyConstant element, T arg) {
 
+    }
+
+    @Override
+    public void visit(PyDict element, T arg) {
+        element.getKeys().forEach(s -> s.accept(this, arg));
+        element.getValues().forEach(s -> s.accept(this, arg));
     }
 
     @Override

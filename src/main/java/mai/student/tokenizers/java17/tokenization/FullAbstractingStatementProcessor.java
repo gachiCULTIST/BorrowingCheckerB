@@ -13,6 +13,10 @@ import com.github.javaparser.resolution.types.ResolvedReferenceType;
 import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.utils.Pair;
 import mai.student.intermediateStates.*;
+import mai.student.intermediateStates.java.DefinedFunction;
+import mai.student.intermediateStates.java.FileRepresentative;
+import mai.student.intermediateStates.java.Qualifier;
+import mai.student.intermediateStates.java.VariableOrConst;
 import mai.student.utility.EntitySearchers;
 
 import java.util.*;
@@ -69,7 +73,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
         try {
             if (!skip) {
                 assignExpr.getValue().accept(new ExpressionModifierVisitor(files, function), null);
-                mai.student.intermediateStates.Type newType = resolvedTypeToMyType(assignExpr.getValue().calculateResolvedType());
+                mai.student.intermediateStates.java.Type newType = resolvedTypeToMyType(assignExpr.getValue().calculateResolvedType());
                 if (newType == null) {
                     return;
                 }
@@ -143,7 +147,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                 try {
                     init.accept(new ExpressionModifierVisitor(files, function), null);
 
-                    mai.student.intermediateStates.Type newType = resolvedTypeToMyType(init.calculateResolvedType());
+                    mai.student.intermediateStates.java.Type newType = resolvedTypeToMyType(init.calculateResolvedType());
                     if (newType == null) {
                         return;
                     }
@@ -385,9 +389,9 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
         }
     }
 
-    protected static mai.student.intermediateStates.Type resolvedTypeToMyType(ResolvedType type) {
+    protected static mai.student.intermediateStates.java.Type resolvedTypeToMyType(ResolvedType type) {
         if (type.isPrimitive()) {
-            return new mai.student.intermediateStates.Type(type.toString(), true);
+            return new mai.student.intermediateStates.java.Type(type.toString(), true);
         }
         if (type.isReferenceType()) {
             ResolvedReferenceType t = (ResolvedReferenceType) type;
@@ -400,9 +404,9 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
             }
 
             // Обработка параметров типа
-            ArrayList<mai.student.intermediateStates.Type> params = new ArrayList<>();
+            ArrayList<mai.student.intermediateStates.java.Type> params = new ArrayList<>();
             for (Pair<ResolvedTypeParameterDeclaration, ResolvedType> pair : t.getTypeParametersMap()) {
-                mai.student.intermediateStates.Type param = resolvedTypeToMyType(pair.b);
+                mai.student.intermediateStates.java.Type param = resolvedTypeToMyType(pair.b);
                 if (param == null) {
                     return null;
                 }
@@ -410,7 +414,7 @@ public class FullAbstractingStatementProcessor extends NameAbstractingStatementP
                 params.add(param);
             }
 
-            return new mai.student.intermediateStates.Type(qParts[qParts.length - 1], params, qualifier);
+            return new mai.student.intermediateStates.java.Type(qParts[qParts.length - 1], params, qualifier);
         }
 
         return null;

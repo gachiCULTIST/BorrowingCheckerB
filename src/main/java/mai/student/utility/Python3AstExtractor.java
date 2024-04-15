@@ -1,5 +1,7 @@
 package mai.student.utility;
 
+import lombok.SneakyThrows;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Python3AstExtractor {
 
-    private static final int waitMinutes = 2;
+    private static final int waitSeconds = 2;
     private static final String scriptName = "astExtractor.py";
     private static final List<String> commandBase = List.of(
             "py",
@@ -34,6 +36,7 @@ public class Python3AstExtractor {
         }
     }
 
+    @SneakyThrows
     public static String extractAsts(Path path) {
         List<String> command = new ArrayList<>(commandBase);
         command.add(path.toString());
@@ -44,23 +47,27 @@ public class Python3AstExtractor {
         Process process = null;
         try {
             process = processBuilder.start();
-            boolean exited = process.waitFor(waitMinutes, TimeUnit.MINUTES);
-
-            if (!exited) {
-                process.destroy();
-            }
+            boolean exited = process.waitFor(waitSeconds, TimeUnit.SECONDS);
 
             String output;
             try (Scanner scanner = new Scanner(new BufferedReader(new InputStreamReader(process.getInputStream())))) {
                 List<String> lines = new ArrayList<>();
                 while (scanner.hasNext()) {
-                    lines.add(scanner.nextLine());
+                    String str = scanner.nextLine();
+                    System.out.println(str);
+                    lines.add(str);
                 }
                 output = String.join("\n", lines);
             }
 
-            if (!exited || process.exitValue() != 0) {
-                throw new RuntimeException("Ошибка выполнения скрипта, вывод: \n" + output);
+            if (!exited) {
+                process.destroy();
+                return output;
+            }
+
+            if (process.exitValue() != 0) {
+                throw new RuntimeException("Ошибка выполнения скрипта, код завершения: " + process.exitValue() +
+                        " , вывод: \n" + output);
             }
 
             return output;

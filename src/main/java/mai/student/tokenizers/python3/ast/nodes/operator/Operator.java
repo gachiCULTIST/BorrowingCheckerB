@@ -5,6 +5,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "_type", include = JsonTypeInfo.As.EXISTING_PROPERTY)
 @JsonSubTypes(value = {
         @JsonSubTypes.Type(value = UAdd.class, name = "UAdd"),
@@ -46,10 +50,19 @@ public abstract class Operator {
     @JsonProperty("_type")
     private String type;
 
-    enum Instance {
-        U_ADD, U_SUB, NOT, INVERT,
-        ADD, SUB, MULT, DIV, FLOOR_DIV, MOD, POW, L_SHIFT, R_SHIFT, BIT_OR, BIT_XOR, BIT_AND, MAT_MULT,
-        AND, OR,
-        EQ, NOT_EQ, LT, LT_E, GT, GT_E, IS, IS_NOT, IN, NOT_IN
+    public abstract Instance getSelfOps();
+
+    @Getter
+    public enum Instance {
+        U_ADD("+"), U_SUB("-"), NOT("not"), INVERT("~"),
+        ADD("+"), SUB("-"), MULT("*"), DIV("/"), FLOOR_DIV("//"), MOD("%"), POW("**"), L_SHIFT("<<"), R_SHIFT(">>"), BIT_OR("|"), BIT_XOR("^"), BIT_AND("&"), MAT_MULT("@"),
+        AND("and"), OR("or"),
+        EQ("=="), NOT_EQ("!="), LT("<"), LT_E("<="), GT(">"), GT_E(">="), IS("is"), IS_NOT("is", "not"), IN("in"), NOT_IN("not", "in");
+
+        private final List<String> ops;
+
+        Instance(String... ops) {
+            this.ops = Arrays.stream(ops).collect(Collectors.toList());
+        }
     }
 }

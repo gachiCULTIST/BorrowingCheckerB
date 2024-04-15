@@ -3,7 +3,6 @@ package mai.student.internet.reqeust.service.github;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.io.CharStreams;
-import com.google.common.net.MediaType;
 import mai.student.internet.reqeust.service.github.dto.RepoFileResponse;
 import mai.student.tokenizers.java17.tokenization.UrlChineseException;
 import mai.student.utility.ConfigReader;
@@ -19,10 +18,10 @@ import org.apache.hc.core5.http.TruncatedChunkException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 
 public class GitHubRepoClient {
 
@@ -32,11 +31,11 @@ public class GitHubRepoClient {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public RepoFileResponse getFile(String owner, String repo, Path path) {
+    public RepoFileResponse getFile(String owner, String repo, String path) {
         String url = String.format(BASE_URL + "%s/%s/contents/%s",
                 URLEncoder.encode(owner, StandardCharsets.UTF_8),
                 URLEncoder.encode(repo, StandardCharsets.UTF_8),
-                URLEncoder.encode(path.toString(), StandardCharsets.UTF_8).replaceAll("%5C", "/").replaceAll("\\+", " "));
+                URLEncoder.encode(path, StandardCharsets.UTF_8).replaceAll("%5C", "/").replaceAll("\\+", " "));
         HttpGet get = null;
 
         try {

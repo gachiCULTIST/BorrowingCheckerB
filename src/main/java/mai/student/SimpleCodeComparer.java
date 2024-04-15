@@ -3,6 +3,7 @@ package mai.student;
 import mai.student.tokenizers.AbstractTokenizer;
 import mai.student.tokenizers.CodeLanguage;
 import mai.student.tokenizers.java17.SimpleJavaTokenizer;
+import mai.student.tokenizers.python3.tokenization.SimplePythonTokenizer;
 import mai.student.utility.UtilityClass;
 
 import java.nio.file.Files;
@@ -18,7 +19,7 @@ public class SimpleCodeComparer extends AbstractCodeComparer {
             throw new UnsupportedOperationException("Path must leads to existing file.");
         }
 
-        AbstractTokenizer tokenizer;
+        AbstractTokenizer<?> tokenizer;
         if (lang == null) {
             lang = UtilityClass.getLanguage(source);
             if (lang == null) {
@@ -33,8 +34,8 @@ public class SimpleCodeComparer extends AbstractCodeComparer {
                 LOGGER.log(Level.SEVERE, "Unsupported file extension: C/C++ is not supported yet!");
                 throw new UnsupportedOperationException("C/C++ is not supported yet!");
             case Python:
-                LOGGER.log(Level.SEVERE, "Python is not supported yet!");
-                throw new UnsupportedOperationException("Python is not supported yet!");
+                tokenizer = new SimplePythonTokenizer(source, lang);
+                break;
             default:
                 LOGGER.log(Level.SEVERE, "Unknown language. Hables Espanol?");
                 throw new UnsupportedOperationException("Unknown language. Hables Espanol?");

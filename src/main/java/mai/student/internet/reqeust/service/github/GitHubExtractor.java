@@ -6,6 +6,7 @@ import mai.student.internet.reqeust.service.github.dto.RepoFileResponse;
 import mai.student.utility.ConfigReader;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
@@ -100,7 +101,7 @@ public class GitHubExtractor {
         return destFile;
     }
 
-    public void extractFile(String owner, String repo, Path path) {
+    public void extractFile(String owner, String repo, String path) {
         RepoFileResponse file = client.getFile(owner, repo, path);
 
         try (OutputStream writer = new BufferedOutputStream(new FileOutputStream(Path.of(destination.toString(), file.getName()).toFile()))) {

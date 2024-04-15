@@ -1,9 +1,9 @@
 package mai.student.tokenizers.java17.preprocessing;
 
 import com.github.javaparser.*;
-import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.CallableDeclaration;
-import mai.student.intermediateStates.*;
+import mai.student.intermediateStates.java.DefinedFunction;
+import mai.student.intermediateStates.java.FileRepresentative;
 
 import java.io.IOException;
 import java.util.*;

@@ -120,6 +120,8 @@ public interface PyVoidVisitor<T> {
 
     void visit(PyConstant element, T arg);
 
+    void visit(PyDict element, T arg);
+
     void visit(PyFormattedValue element, T arg);
 
     void visit(PyJoinedStr element, T arg);
