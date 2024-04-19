@@ -45,17 +45,18 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
     private static final int ANALYSING_AMOUNT = Integer.parseInt(ConfigReader.getProperty("finder.source.amount"));
     private static final int WAIT_TIMEOUT = 60000;
 
-    private final GitHubCodeClient client = new GitHubCodeClient();
+    private final GitHubCodeClient client;
     private final AbstractJavaDivider divider = new JavaLimitDivider();
-    private final GitHubExtractor extractor = new GitHubExtractor();
+    private final GitHubExtractor extractor;
     private List<InternetSearchResult> result;
 
-    public InternetBorrowingFinderImpl(Path source, CodeLanguage lang) {
+    public InternetBorrowingFinderImpl(Path source, CodeLanguage lang, String token) {
         super(source, lang, FileWithSourceRating::new);
         configureParser(source);
         divider.addFilter(new DeleteImportFilter());
         divider.addFilter(new DeletePackageFilter());
-        // TODO: статический парсер (посмотреть выходы)
+        client = new GitHubCodeClient(token);
+        extractor = new GitHubExtractor(token);
     }
 
     @Override
@@ -70,9 +71,7 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
         for (FileWithSourceRating file : files) {
 
             List<String> queries = divider.divide(file);
-            System.out.println("QUERIES amount: " + queries.size());
             List<CodeSearchResponse> responses = queries.stream().map(q -> sendRequest(q, false)).filter(Objects::nonNull).collect(Collectors.toList());
-            System.out.println("ALL items: " + (Integer) responses.stream().map(CodeSearchResponse::getItems).mapToInt(List::size).sum());
 
             List<CodeSearchResponse.Item> semitarget = responses.stream().map(CodeSearchResponse::getItems)
                     .reduce(new ArrayList<>(), (a, b) -> {
@@ -82,39 +81,14 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
                         a.addAll(b);
                         return a;
                     });
-            System.out.println("Unique items: " + semitarget.size());
 
             FileStatisticCollector fileStatisticCollector = new FileStatisticCollector();
             semitarget.forEach(fileStatisticCollector::process);
             file.addStats(fileStatisticCollector.getResult());
-            System.out.println("Unique file pathes: " + fileStatisticCollector.getResult().size());
 
             semitarget.forEach(repoStatisticCollector::process);
-            System.out.println("Unique repos: " + fileStatisticCollector.getResult().size());
 
             searchResult.put(file, semitarget);
-        }
-
-        try {
-            CodeLanguage lang = UtilityClass.getLanguage(source);
-
-            CodeComparer codeComparer = new ReducingCodeComparer();
-            codeComparer.setFirstProgram(source, lang);
-
-            List<SourceStatistic> reposStatistic = new ArrayList<>(repoStatisticCollector.getResult());
-            reposStatistic.sort(new SourceStatisticComparator());
-//            for (int i = 0; i < ANALYSING_AMOUNT && i < reposStatistic.size(); ++i) {
-//                try {
-//                    hardWay(codeComparer, reposStatistic.get(i), lang);
-//                } catch (NoStartPointException | ParseProblemException ex) {
-//                    System.out.println(ex.getMessage());
-//                    ex.printStackTrace();
-//                    // TODO: log
-//                }
-//            }
-        } catch (NoStartPointException ex) {
-            System.out.println("Не удалось пройти сложный путь");
-            // TODO: log
         }
 
         searchResult.forEach(this::simpleWay);
@@ -163,7 +137,6 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
     }
 
     private CodeSearchResponse sendRequest(String query, boolean repeatAnotherWay) {
-        System.out.println(query);
         List<NameValuePair> request = new CodeSearchRequestBuilder()
                 .setQueryLanguage(QueryLanguages.JAVA)
                 .setQueryContent(query)
@@ -179,7 +152,6 @@ public class InternetBorrowingFinderImpl extends AbstractInternetBorrowingFinder
             }
 
             if (ex.getCode() != HttpStatus.SC_FORBIDDEN) {
-                System.out.println(ex.getUri().toString());
                 throw ex;
             }
 

@@ -42,11 +42,6 @@ public class PyFileRepresentative implements IStructure<PyFileRepresentative> {
     }
 
     @Override
-    public void actuateTypes(List<PyFileRepresentative> files) {
-        IStructure.super.actuateTypes(files);
-    }
-
-    @Override
     public boolean isLinked() {
         return IStructure.super.isLinked();
     }

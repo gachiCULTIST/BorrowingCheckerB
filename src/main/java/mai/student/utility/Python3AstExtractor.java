@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Python3AstExtractor {
 
-    private static final int waitSeconds = 2;
+    private static final int waitMillis = 100;
     private static final String scriptName = "astExtractor.py";
     private static final List<String> commandBase = List.of(
             "py",
@@ -47,14 +47,13 @@ public class Python3AstExtractor {
         Process process = null;
         try {
             process = processBuilder.start();
-            boolean exited = process.waitFor(waitSeconds, TimeUnit.SECONDS);
+            boolean exited = process.waitFor(waitMillis, TimeUnit.MILLISECONDS);
 
             String output;
             try (Scanner scanner = new Scanner(new BufferedReader(new InputStreamReader(process.getInputStream())))) {
                 List<String> lines = new ArrayList<>();
                 while (scanner.hasNext()) {
                     String str = scanner.nextLine();
-                    System.out.println(str);
                     lines.add(str);
                 }
                 output = String.join("\n", lines);

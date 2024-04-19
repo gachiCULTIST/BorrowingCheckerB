@@ -42,7 +42,7 @@ public class PyMainFinderVisitor extends AbstractPyVoidVisitor<Object> {
             }
         }
 
-        throw new NoStartPointException("Нет точки входа");
+        result = files.get(0);
     }
 
     @Override

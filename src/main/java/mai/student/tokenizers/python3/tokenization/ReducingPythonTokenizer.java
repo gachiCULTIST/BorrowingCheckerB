@@ -2,7 +2,6 @@ package mai.student.tokenizers.python3.tokenization;
 
 import mai.student.intermediateStates.python.PyFileRepresentative;
 import mai.student.tokenizers.CodeLanguage;
-import mai.student.tokenizers.java17.preprocessing.AnalysisVisitor;
 import mai.student.tokenizers.python3.preprocessing.PyAnalysisVisitor;
 import mai.student.tokenizers.python3.preprocessing.PyMainFinderVisitor;
 
@@ -44,7 +43,7 @@ public class ReducingPythonTokenizer extends AbstractPythonTokenizer{
         main.getAst().accept(visitor, null);
 
 //         Запись результатов теста
-        printTree(result);
-        System.out.println();
+//        printTree(result);
+//        System.out.println();
     }
 }

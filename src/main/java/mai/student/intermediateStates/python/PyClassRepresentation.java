@@ -49,7 +49,17 @@ public class PyClassRepresentation implements IStructure<PyFileRepresentative> {
 
     @Override
     public void actuateTypes(List<PyFileRepresentative> files) {
-        IStructure.super.actuateTypes(files);
+        if (this.isLinked) {
+            return;
+        }
+        this.isLinked = true;
+
+        inheritanceList.forEach(a -> a.actuateLink(files, this));
+        params.forEach(p -> p.actuateLink(files, this));
+        classes.forEach(c -> c.actuateTypes(files));
+        functions.forEach(f -> f.actuateTypes(files));
+        variables.forEach(v -> v.actuateTypes(files));
+        parent.actuateTypes(files);
     }
 
     @Override

@@ -18,7 +18,6 @@ import org.apache.hc.core5.http.TruncatedChunkException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -27,9 +26,13 @@ public class GitHubRepoClient {
 
     private static final String BASE_URL = ConfigReader.getProperty("github.host") + "repos/";
     private static final String VERSION = ConfigReader.getProperty("github.version");
-    private static final String TOKEN = ConfigReader.getProperty("github.token");
 
+    private final String token;
     private final ObjectMapper mapper = new ObjectMapper();
+
+    public GitHubRepoClient(String token) {
+        this.token = token;
+    }
 
     public RepoFileResponse getFile(String owner, String repo, String path) {
         String url = String.format(BASE_URL + "%s/%s/contents/%s",
@@ -45,7 +48,7 @@ public class GitHubRepoClient {
         }
 
         get.setHeader(HttpHeaders.ACCEPT, ConfigReader.getProperty("github.accept"));
-        get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN);
+        get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         get.setHeader("X-GitHub-Api-Version", VERSION);
 
         try (CloseableHttpClient client = HttpClients.createDefault();
@@ -87,7 +90,7 @@ public class GitHubRepoClient {
         HttpGet get = new HttpGet(String.format(BASE_URL + "%s/%s/zipball", owner, repo));
 
         get.setHeader(HttpHeaders.ACCEPT, ConfigReader.getProperty("github.accept"));
-        get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN);
+        get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         get.setHeader("X-GitHub-Api-Version", VERSION);
 
         try (CloseableHttpClient client = HttpClients.createDefault();

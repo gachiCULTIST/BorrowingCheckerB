@@ -12,7 +12,7 @@ def traverse(targetPath):
         if not targetPath.endswith('.py'):
             return result
 
-        with open(targetPath, 'r') as f:
+        with open(targetPath, 'r', encoding="UTF8") as f:
             content = f.read()
             result.append({"path": targetPath, "text": content})
             return result
@@ -24,7 +24,7 @@ def traverse(targetPath):
                 continue
 
             filePath = os.path.join(root, filename)
-            with open(filePath, 'r') as f:
+            with open(filePath, 'r', encoding="UTF8") as f:
                 content = f.read()
                 result.append({"path": filePath, "text": content})
 

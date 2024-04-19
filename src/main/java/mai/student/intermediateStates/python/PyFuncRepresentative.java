@@ -20,6 +20,7 @@ public class PyFuncRepresentative implements IStructure<PyFileRepresentative> {
     private List<PyDecorator> decorators = new ArrayList<>();
     private boolean async;
     private final String name;
+    private boolean isStatic = false;
     private List<String> argNames = new ArrayList<>();
     private List<PyType> argTypes = new ArrayList<>();
 
@@ -57,7 +58,24 @@ public class PyFuncRepresentative implements IStructure<PyFileRepresentative> {
 
     @Override
     public void actuateTypes(List<PyFileRepresentative> files) {
-        IStructure.super.actuateTypes(files);
+        if (this.isLinked) {
+            return;
+        }
+        this.isLinked = true;
+
+        argTypes.forEach(a -> {
+            if (a != null) {
+                a.actuateLink(files, this);
+            }
+        });
+        params.forEach(p -> p.actuateLink(files, this));
+        if (returnValue != null) {
+            returnValue.actuateLink(files, this);
+        }
+        classes.forEach(c -> c.actuateTypes(files));
+        functions.forEach(f -> f.actuateTypes(files));
+        variables.forEach(v -> v.actuateTypes(files));
+        parent.actuateTypes(files);
     }
 
     @Override

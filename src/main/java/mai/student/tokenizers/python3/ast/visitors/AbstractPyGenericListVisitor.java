@@ -177,7 +177,9 @@ public abstract class AbstractPyGenericListVisitor<T, K> implements PyGenericLis
     public List<T> visit(PyIf element, K arg) {
         List<T> result = new ArrayList<>(element.getTest().accept(this, arg));
 
-        element.getBody().forEach(s -> result.addAll(s.accept(this, arg)));
+        element.getBody().forEach(s -> {
+            result.addAll(s.accept(this, arg));
+        });
         if (element.getOrelse() != null) {
             element.getOrelse().forEach(s -> result.addAll(s.accept(this, arg)));
         }

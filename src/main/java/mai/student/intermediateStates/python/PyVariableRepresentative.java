@@ -39,7 +39,18 @@ public class PyVariableRepresentative implements IStructure<PyFileRepresentative
 
     @Override
     public void actuateTypes(List<PyFileRepresentative> files) {
-        IStructure.super.actuateTypes(files);
+        if (this.isLinked) {
+            return;
+        }
+        this.isLinked = true;
+
+        if (this.type != null) {
+            this.type.actuateLink(files, this);
+        }
+        if (this.realType != null) {
+            this.realType.actuateLink(files, this);
+        }
+        parent.actuateTypes(files);
     }
 
     @Override

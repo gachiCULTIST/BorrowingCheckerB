@@ -7,10 +7,11 @@ import mai.student.tokenizers.python3.preprocessing.PySpecificFunction;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class PyEntitySearcher {
 
-    public static List<PyFuncRepresentative> findMethodsAnywhere(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start, boolean called) {
+    public static List<PyFuncRepresentative> findMethodsAnywhere(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start, boolean notInit) {
         if (files == null || name == null) {
             return null;
         }
@@ -27,17 +28,14 @@ public class PyEntitySearcher {
 
                 file.getClasses().forEach(c -> {
                     if (c.getName().equals(name)) {
-                        PyFuncRepresentative init = c.getFunctions().stream()
-                                .filter(f -> f.getName().equals(PySpecificFunction.INIT.getName())).findFirst().orElse(null);
-                        if (init != null) {
-                            result.add(init);
-                        }
+                        result.addAll(c.getFunctions().stream()
+                                .filter(f -> f.getName().equals(PySpecificFunction.INIT.getName())).collect(Collectors.toList()));
                     }
 
                     result.addAll(findMethodsAnywhere(files, name, c, false));
                 });
 
-                if (!called) {
+                if (!notInit) {
                     file.getImports().forEach(i -> {
                         Path root = file.getPath().getParent();
                         if (root != null) {
@@ -53,6 +51,10 @@ public class PyEntitySearcher {
                 break;
             case Class:
                 PyClassRepresentation classs = (PyClassRepresentation) start;
+                if (!classs.isLinked()) {
+                    classs.actuateTypes(files);
+                }
+
                 classs.getFunctions().forEach(f -> {
                     if (f.getName().equals(name)) {
                         result.add(f);
@@ -73,6 +75,10 @@ public class PyEntitySearcher {
                 break;
             case Function:
                 PyFuncRepresentative func = (PyFuncRepresentative) start;
+                if (!func.isLinked()) {
+                    func.actuateTypes(files);
+                }
+
                 func.getFunctions().forEach(f -> {
                     if (f.getName().equals(name)) {
                         result.add(f);
@@ -96,76 +102,110 @@ public class PyEntitySearcher {
         return result;
     }
 
-    public static PyFuncRepresentative findMethod(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start, boolean justInheritance) {
-        if (files == null || name == null) {
-            return null;
+    public static List<PyFuncRepresentative> findMethod(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start, boolean justInheritance) {
+        if (files == null || name == null || start == null) {
+            return new ArrayList<>();
         }
 
-        PyFuncRepresentative result = null;
+        List<PyFuncRepresentative> result = new ArrayList<>();
         switch (start.getStrucType()) {
             case File:
                 PyFileRepresentative file = (PyFileRepresentative) start;
                 for (PyFuncRepresentative f : file.getFunctions()) {
                     if (f.getName().equals(name)) {
-                        return f;
+                        result.add(f);
                     }
                 }
 
+                // Находим конструкторы
                 for (PyClassRepresentation c : file.getClasses()) {
                     if (c.getName().equals(name)) {
-                        PyFuncRepresentative init = c.getFunctions().stream()
-                                .filter(f -> f.getName().equals(PySpecificFunction.INIT.getName())).findFirst().orElse(null);
-                        if (init != null) {
-                            return init;
-                        }
-                    }
-
-                    result = findMethod(files, name, c, false);
-                    if (result != null) {
-                        return result;
+                        result.addAll(findMethod(files, PySpecificFunction.INIT.getName(), c, true));
                     }
                 }
+
+                Path root = file.getPath().getParent();
+                if (root != null) {
+                    // Для статического импорта
+                    file.getImports().stream().filter(PyImport::isStatic).forEach(i -> {
+                        if (i.getAlias() != null && i.getAlias().equals(name)) {
+                            Path otherFile = root.resolve(i.getModule());
+                            files.forEach(f -> {
+                                if (f.getPath().equals(otherFile)) {
+                                    result.addAll(findMethod(files, i.getEntity(), f, false));
+                                }
+                            });
+                        } else if (i.getEntity().equals(name)) {
+                            Path otherFile = root.resolve(i.getModule());
+                            files.forEach(f -> {
+                                if (f.getPath().equals(otherFile)) {
+                                    result.addAll(findMethod(files, name, f, false));
+                                }
+                            });
+                        }
+                    });
+                }
+                break;
             case Class:
                 PyClassRepresentation classs = (PyClassRepresentation) start;
+                List<PyFuncRepresentative> semiResult = new ArrayList<>();
+                if (!classs.isLinked()) {
+                    classs.actuateTypes(files);
+                }
+
                 for (PyFuncRepresentative f : classs.getFunctions()) {
                     if (f.getName().equals(name)) {
-                        return f;
+                        semiResult.add(f);
                     }
                 }
 
-                for (PyType supers : classs.getInheritanceList()) {
-                    PyClassRepresentation sc = findClass(files, supers.getName(), classs);
-                    if (sc != null) {
-                        result = findMethod(files, name, sc, true);
-                        if (result != null) {
-                            return result;
+                if (semiResult.isEmpty()) {
+                    for (PyType supers : classs.getInheritanceList()) {
+                        PyClassRepresentation sc = supers.getLinkToClass();
+                        if (sc != null) {
+                            result.addAll(findMethod(files, name, sc, true));
                         }
                     }
                 }
 
+                result.addAll(semiResult);
                 if (!justInheritance) {
-                    result = findMethod(files, name, classs.getParent(), false);
-                    if (result != null) {
-                        return result;
-                    }
+                    result.addAll(findMethod(files, name, classs.getParent(), false));
                 }
                 break;
             case Function:
                 PyFuncRepresentative func = (PyFuncRepresentative) start;
+                if (!func.isLinked()) {
+                    func.actuateTypes(files);
+                }
+
                 for (PyFuncRepresentative f : func.getFunctions()) {
                     if (f.getName().equals(name)) {
-                        return f;
+                        result.add(f);
                     }
                 }
 
-                result = findMethod(files, name, func.getParent(), false);
-                if (result != null) {
-                    return result;
+                result.addAll(findMethod(files, name, func.getParent(), false));
+                break;
+            case Variable:
+                PyVariableRepresentative var = (PyVariableRepresentative) start;
+                if (!var.isLinked()) {
+                    var.actuateTypes(files);
+                }
+
+                if (var.getRealType() != null && var.getRealType().getLinkToClass() != null) {
+                    result.addAll(findMethod(files, name, var.getRealType().getLinkToClass(), false));
+                    break;
+                }
+
+                if (var.getType() != null && var.getType().getLinkToClass() != null) {
+                    result.addAll(findMethod(files, name, var.getType().getLinkToClass(), false));
+                    break;
                 }
                 break;
         }
 
-        return null;
+        return result;
     }
 
     public static PyClassRepresentation findClass(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start) {
@@ -173,7 +213,7 @@ public class PyEntitySearcher {
             return null;
         }
 
-        PyClassRepresentation result = null;
+        PyClassRepresentation result;
         switch (start.getStrucType()) {
             case File:
                 PyFileRepresentative file = (PyFileRepresentative) start;
@@ -186,6 +226,10 @@ public class PyEntitySearcher {
                 break;
             case Class:
                 PyClassRepresentation classs = (PyClassRepresentation) start;
+                if (!classs.isLinked()) {
+                    classs.actuateTypes(files);
+                }
+
                 for (PyClassRepresentation c : classs.getClasses()) {
                     if (c.getName().equals(name)) {
                         return c;
@@ -199,6 +243,10 @@ public class PyEntitySearcher {
                 break;
             case Function:
                 PyFuncRepresentative func = (PyFuncRepresentative) start;
+                if (!func.isLinked()) {
+                    func.actuateTypes(files);
+                }
+
                 for (PyClassRepresentation c : func.getClasses()) {
                     if (c.getName().equals(name)) {
                         return c;
@@ -208,6 +256,20 @@ public class PyEntitySearcher {
                 result = findClass(files, name, func.getParent());
                 if (result != null) {
                     return result;
+                }
+                break;
+            case Variable:
+                PyVariableRepresentative var = (PyVariableRepresentative) start;
+                if (!var.isLinked()) {
+                    var.actuateTypes(files);
+                }
+
+                if (var.getRealType() != null && var.getRealType().getLinkToClass() != null) {
+                    return findClass(files, name, var.getRealType().getLinkToClass());
+                }
+
+                if (var.getType() != null && var.getType().getLinkToClass() != null) {
+                    return findClass(files, name, var.getType().getLinkToClass());
                 }
                 break;
         }
@@ -220,7 +282,7 @@ public class PyEntitySearcher {
             return null;
         }
 
-        PyVariableRepresentative result = null;
+        PyVariableRepresentative result;
         switch (start.getStrucType()) {
             case File:
                 PyFileRepresentative file = (PyFileRepresentative) start;
@@ -229,8 +291,13 @@ public class PyEntitySearcher {
                         return v;
                     }
                 }
+                break;
             case Class:
                 PyClassRepresentation classs = (PyClassRepresentation) start;
+                if (!classs.isLinked()) {
+                    classs.actuateTypes(files);
+                }
+
                 for (PyVariableRepresentative v : classs.getVariables()) {
                     if (v.getName().equals(name)) {
                         return v;
@@ -256,6 +323,10 @@ public class PyEntitySearcher {
                 break;
             case Function:
                 PyFuncRepresentative func = (PyFuncRepresentative) start;
+                if (!func.isLinked()) {
+                    func.actuateTypes(files);
+                }
+
                 for (PyVariableRepresentative v : func.getVariables()) {
                     if (v.getName().equals(name)) {
                         return v;
@@ -267,22 +338,35 @@ public class PyEntitySearcher {
                     return result;
                 }
                 break;
+            case Variable:
+                PyVariableRepresentative var = (PyVariableRepresentative) start;
+                if (!var.isLinked()) {
+                    var.actuateTypes(files);
+                }
+
+                if (var.getRealType() != null && var.getRealType().getLinkToClass() != null) {
+                    return findVariable(files, name, var.getRealType().getLinkToClass(), false);
+                }
+
+                if (var.getType() != null && var.getType().getLinkToClass() != null) {
+                    return findVariable(files, name, var.getType().getLinkToClass(), false);
+                }
+                break;
         }
 
         return null;
     }
 
-    public static PyFileRepresentative findModule(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start) {
+    public static PyFileRepresentative findModuleByAlias(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start) {
         if (files == null || name == null) {
             return null;
         }
 
-        PyVariableRepresentative result = null;
         switch (start.getStrucType()) {
             case File:
                 PyFileRepresentative file = (PyFileRepresentative) start;
                 for (PyImport i : file.getImports()) {
-                    if (i.getAlias().equals(name)) {
+                    if (i.getAlias() != null && i.getAlias().equals(name)) {
                         Path root = file.getPath().getParent();
                         if (root != null) {
                             Path otherFile = root.resolve(i.getModule());
@@ -297,9 +381,46 @@ public class PyEntitySearcher {
                 break;
             case Class:
             case Function:
-                return findModule(files, name, start.getParent());
+                return findModuleByAlias(files, name, start.getParent());
         }
 
         return null;
+    }
+
+    public static PyFileRepresentative findModuleByFullPath(List<PyFileRepresentative> files, Path path, IStructure<PyFileRepresentative> start) {
+        if (files == null || path == null) {
+            return null;
+        }
+
+        switch (start.getStrucType()) {
+            case File:
+                PyFileRepresentative file = (PyFileRepresentative) start;
+                for (PyImport i : file.getImports()) {
+                    if (i.getModule().equals(path)) {
+                        Path root = file.getPath().getParent();
+                        if (root != null) {
+                            Path otherFile = root.resolve(i.getModule());
+                            for (PyFileRepresentative f : files) {
+                                if (f.getPath().equals(otherFile)) {
+                                    return f;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            case Class:
+            case Function:
+                return findModuleByFullPath(files, path, start.getParent());
+        }
+
+        return null;
+    }
+
+    public static IStructure<PyFileRepresentative> findEntityExceptMethod(List<PyFileRepresentative> files, String name, IStructure<PyFileRepresentative> start) {
+        IStructure<PyFileRepresentative> result = PyEntitySearcher.findVariable(files, name, start, false);
+        result = result == null ? PyEntitySearcher.findClass(files, name, start) : result;
+        result = result == null ? PyEntitySearcher.findModuleByAlias(files, name, start) : result;
+        return result;
     }
 }

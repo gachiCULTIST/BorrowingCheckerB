@@ -1160,7 +1160,10 @@ public class PyBasicTokenizerVisitor extends AbstractPyVoidVisitor<Object> {
             element.getLower().accept(this, arg);
         }
         addToken(COLON);
-        element.getUpper().accept(this, arg);
+
+        if (element.getUpper() != null) {
+            element.getUpper().accept(this, arg);
+        }
 
         if (element.getStep() != null) {
             addToken(COLON);

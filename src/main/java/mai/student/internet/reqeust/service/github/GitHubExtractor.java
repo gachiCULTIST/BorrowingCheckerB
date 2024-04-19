@@ -18,15 +18,17 @@ import java.util.zip.ZipInputStream;
 @Setter
 public class GitHubExtractor {
 
-    private final GitHubRepoClient client = new GitHubRepoClient();
+    private final GitHubRepoClient client;
     private Path destination = Path.of(ConfigReader.getProperty("extractor.default.dir"));
 
-    public GitHubExtractor() {
+    public GitHubExtractor(String token) {
         setUpFolder();
+        this.client = new GitHubRepoClient(token);
     }
 
-    public GitHubExtractor(Path destination) {
+    public GitHubExtractor(Path destination, String token) {
         this.destination = destination;
+        this.client = new GitHubRepoClient(token);
         setUpFolder();
     }
 

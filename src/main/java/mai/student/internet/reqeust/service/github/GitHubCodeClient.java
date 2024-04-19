@@ -17,7 +17,6 @@ import org.apache.hc.core5.net.URIBuilder;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -25,9 +24,13 @@ public class GitHubCodeClient {
 
     private static final String URL = ConfigReader.getProperty("github.host") + "search/code";
     private static final String VERSION = ConfigReader.getProperty("github.version");
-    private static final String TOKEN = ConfigReader.getProperty("github.token");
+    private final String token;
 
 //    public final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    public GitHubCodeClient(String token) {
+        this.token = token;
+    }
 
     public CodeSearchResponse get(List<NameValuePair> request, boolean repeatAnotherWay) {
         HttpGet get = new HttpGet(URL);
@@ -43,7 +46,6 @@ public class GitHubCodeClient {
                         .build();
             }
 
-            System.out.println(uri); // TODO: log
             get.setUri(uri);
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Что-то пошло не так", ex);
@@ -52,7 +54,7 @@ public class GitHubCodeClient {
         ObjectMapper mapper = new ObjectMapper();
 
         get.setHeader(HttpHeaders.ACCEPT, ConfigReader.getProperty("github.accept"));
-        get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN);
+        get.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         get.setHeader("X-GitHub-Api-Version", VERSION);
 
         try (CloseableHttpClient client = HttpClients.createDefault();

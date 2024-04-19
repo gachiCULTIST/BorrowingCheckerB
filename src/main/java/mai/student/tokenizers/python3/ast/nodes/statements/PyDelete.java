@@ -21,6 +21,6 @@ public class PyDelete extends PyStatement {
 
     @Override
     public <T, K> List<T> accept(PyGenericListVisitor<T, K> v, K arg) {
-        return null;
+        return v.visit(this, arg);
     }
 }

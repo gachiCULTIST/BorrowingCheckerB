@@ -1,17 +1,14 @@
 package mai.student.tokenizers.python3.preprocessing;
 
 import mai.student.intermediateStates.IStructure;
-import mai.student.intermediateStates.java.DefinedClass;
-import mai.student.intermediateStates.java.DefinedFunction;
-import mai.student.intermediateStates.java.FileRepresentative;
-import mai.student.intermediateStates.java.VariableOrConst;
 import mai.student.intermediateStates.python.*;
-import mai.student.tokenizers.python3.ast.nodes.async.PyAsyncFor;
+import mai.student.tokenizers.python3.ast.nodes.PyNode;
 import mai.student.tokenizers.python3.ast.nodes.async.PyAsyncFunctionDef;
 import mai.student.tokenizers.python3.ast.nodes.definitions.PyArg;
 import mai.student.tokenizers.python3.ast.nodes.definitions.PyArguments;
 import mai.student.tokenizers.python3.ast.nodes.definitions.PyClassDef;
 import mai.student.tokenizers.python3.ast.nodes.definitions.PyFunctionDef;
+import mai.student.tokenizers.python3.ast.nodes.imports.PyAlias;
 import mai.student.tokenizers.python3.ast.nodes.imports.PyImport;
 import mai.student.tokenizers.python3.ast.nodes.imports.PyImportFrom;
 import mai.student.tokenizers.python3.ast.nodes.roots.PyExpressionContainer;
@@ -27,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<PyFileRepresentative>, IStructure<PyFileRepresentative>> {
+
+    protected static final String DEFAULT_SELF = "self";
 
     // Заполнение файлов
     @Override
@@ -78,6 +77,30 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
             ));
         }
 
+        // Делаем конструктор по умолчанию, если других нет
+        if (result.getFunctions().stream().noneMatch(f -> f.getName().equals(PySpecificFunction.INIT.getName()))) {
+            PyFuncRepresentative init = new PyFuncRepresentative(PySpecificFunction.INIT.getName());
+            init.setSelfNode(null);
+            init.setTokenized(true);
+            init.setParent(result);
+
+            PyVariableRepresentative v = new PyVariableRepresentative(DEFAULT_SELF);
+            v.setType(new PyType().setName(result.getName())
+                    .setLinked(true)
+                    .setLinkToClass(result));
+            v.setLinked(true);
+            v.setParent(init);
+
+            init.getArgTypes().add(v.getType());
+            init.getArgNames().add(v.getName());
+
+            init.setReturnValue(new PyType().setName(result.getName())
+                    .setLinkToClass(result)
+                    .setLinked(true));
+
+            result.getFunctions().add(init);
+        }
+
         return List.of(result);
     }
 
@@ -87,24 +110,38 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
         PyFuncRepresentative result = new PyFuncRepresentative(element.getName());
         result.setSelfNode(element);
         result.setParent(arg);
-        System.out.println(element.getName() + " " + arg.getName());
 
         if (element.getDecoratorList() != null) {
-            element.getDecoratorList().forEach(s -> result.getDecorators().add(
-                    new PyDecoratorConstructorVisitor(s).getResult())
+            element.getDecoratorList().forEach(s -> {
+                        PyDecorator dec = new PyDecoratorConstructorVisitor(s).getResult();
+                        result.getDecorators().add(dec);
+
+                        if (dec.getElements().get(0).equals(PyDecorators.STATIC.getName())) {
+                            result.setStatic(true);
+                        }
+                    }
             );
         }
 
         if (element.getArgs() != null) {
-            element.getArgs().accept(this, result)
-                    .forEach(v -> {
-                        result.getArgTypes().add(((PyVariableRepresentative) v).getType());
-                        result.getArgNames().add(v.getName());
-                    });
+            List<IStructure<PyFileRepresentative>> args = element.getArgs().accept(this, result);
+            for (int i = 0; i < args.size(); ++i) {
+                PyVariableRepresentative v = (PyVariableRepresentative) args.get(i);
+                if (i == 0 && !result.isStatic() && arg instanceof PyClassRepresentation) {
+                    v.setType(new PyType().setName(arg.getName()).setLinked(true).setLinkToClass((PyClassRepresentation) arg));
+                }
+
+                result.getArgTypes().add(v.getType());
+                result.getArgNames().add(v.getName());
+            }
         }
 
         if (element.getBody() != null) {
             element.getBody().forEach(s -> processChildren(result, s.accept(this, result)));
+        }
+
+        if (element.getName().equals(PySpecificFunction.INIT.getName())) {
+            result.setReturnValue(new PyType().setName(arg.getName()));
         }
 
         if (element.getReturns() != null) {
@@ -130,18 +167,36 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
         result.setParent(arg);
 
         if (element.getDecoratorList() != null) {
-            element.getDecoratorList().forEach(s -> result.getDecorators().add(
-                    new PyDecoratorConstructorVisitor(s).getResult())
+            element.getDecoratorList().forEach(s -> {
+                        PyDecorator dec = new PyDecoratorConstructorVisitor(s).getResult();
+                        result.getDecorators().add(dec);
+
+                        if (dec.getElements().get(0).equals(PyDecorators.STATIC.getName())) {
+                            result.setStatic(true);
+                        }
+                    }
             );
         }
 
         if (element.getArgs() != null) {
-            element.getArgs().accept(this, result)
-                    .forEach(v -> result.getArgTypes().add(((PyVariableRepresentative) v).getType()));
+            List<IStructure<PyFileRepresentative>> args = element.getArgs().accept(this, result);
+            for (int i = 0; i < args.size(); ++i) {
+                PyVariableRepresentative v = (PyVariableRepresentative) args.get(i);
+                if (i == 0 && !result.isStatic() && arg instanceof PyClassRepresentation) {
+                    v.setType(new PyType().setName(arg.getName()).setLinked(true).setLinkToClass((PyClassRepresentation) arg));
+                }
+
+                result.getArgTypes().add(v.getType());
+                result.getArgNames().add(v.getName());
+            }
         }
 
         if (element.getBody() != null) {
             element.getBody().forEach(s -> processChildren(result, s.accept(this, result)));
+        }
+
+        if (element.getName().equals(PySpecificFunction.INIT.getName())) {
+            result.setReturnValue(new PyType().setName(arg.getName()));
         }
 
         if (element.getReturns() != null) {
@@ -204,7 +259,6 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
 
             result.addAll(varsConstructor.getResult());
             if (isInit) {
-                System.out.println(arg.getName());
                 processChildren(arg.getParent(), varsConstructor.getClassVars());
             }
         });
@@ -251,22 +305,34 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
 
     @Override
     public List<IStructure<PyFileRepresentative>> visit(PyImport element, IStructure<PyFileRepresentative> arg) {
-        mai.student.intermediateStates.python.PyImport result = new mai.student.intermediateStates.python.PyImport();
-        result.setModule(Path.of(element.getNames().get(0).getName().replaceAll("\\.", "\\\\") + ".py"));
-        result.setAlias(element.getNames().get(0).getAsname());
-        ((PyFileRepresentative) arg).getImports().add(result);
+        List<mai.student.intermediateStates.python.PyImport> result = new ArrayList<>();
+
+        for (PyAlias alias : element.getNames()) {
+            mai.student.intermediateStates.python.PyImport pyImport = new mai.student.intermediateStates.python.PyImport();
+            pyImport.setModule(Path.of(alias.getName().replaceAll("\\.", "\\\\") + ".py"));
+            pyImport.setAlias(alias.getAsname());
+            result.add(pyImport);
+        }
+
+        ((PyFileRepresentative) arg).getImports().addAll(result);
 
         return new ArrayList<>();
     }
 
     @Override
     public List<IStructure<PyFileRepresentative>> visit(PyImportFrom element, IStructure<PyFileRepresentative> arg) {
-        mai.student.intermediateStates.python.PyImport result = new mai.student.intermediateStates.python.PyImport();
-        result.setModule(Path.of(element.getModule().replaceAll("\\.", "\\\\") + ".py"));
-        result.setStatic(true);
-        result.setEntity(element.getNames().get(0).getName());
-        result.setAlias(element.getNames().get(0).getAsname());
-        ((PyFileRepresentative) arg).getImports().add(result);
+        List<mai.student.intermediateStates.python.PyImport> result = new ArrayList<>();
+
+        for (PyAlias alias : element.getNames()) {
+            mai.student.intermediateStates.python.PyImport pyImport = new mai.student.intermediateStates.python.PyImport();
+            pyImport.setModule(Path.of(element.getModule().replaceAll("\\.", "\\\\") + ".py"));
+            pyImport.setStatic(true);
+            pyImport.setEntity(alias.getName());
+            pyImport.setAlias(alias.getAsname());
+            result.add(pyImport);
+        }
+
+        ((PyFileRepresentative) arg).getImports().addAll(result);
 
         return new ArrayList<>();
     }
