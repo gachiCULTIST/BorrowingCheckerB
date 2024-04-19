@@ -1,8 +1,8 @@
 package mai.student.tokenizers.python3.preprocessing;
 
 import mai.student.intermediateStates.IStructure;
+import mai.student.intermediateStates.StructureType;
 import mai.student.intermediateStates.python.*;
-import mai.student.tokenizers.python3.ast.nodes.PyNode;
 import mai.student.tokenizers.python3.ast.nodes.async.PyAsyncFunctionDef;
 import mai.student.tokenizers.python3.ast.nodes.definitions.PyArg;
 import mai.student.tokenizers.python3.ast.nodes.definitions.PyArguments;
@@ -314,7 +314,7 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
             result.add(pyImport);
         }
 
-        ((PyFileRepresentative) arg).getImports().addAll(result);
+        ((PyFileRepresentative) toRoot(arg)).getImports().addAll(result);
 
         return new ArrayList<>();
     }
@@ -387,5 +387,13 @@ public class PyAnalysisVisitor extends AbstractPyGenericListVisitor<IStructure<P
             default:
                 throw new UnsupportedOperationException("AnalysisVisitor.processChildren: unsupported target type!");
         }
+    }
+
+    private IStructure<PyFileRepresentative> toRoot(IStructure<PyFileRepresentative> target) {
+        if (target.getStrucType() == StructureType.File) {
+            return target;
+        }
+
+        return toRoot(target.getParent());
     }
 }
